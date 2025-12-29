@@ -1,0 +1,27 @@
+[package]
+name = "pitch-detector"
+version = "0.1.0"
+edition = "2021"
+authors = ["Luma"]
+description = "WASM pitch detection using YIN algorithm"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["console_error_panic_hook"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+
+# Optional: better panic messages in console
+console_error_panic_hook = { version = "0.1", optional = true }
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
