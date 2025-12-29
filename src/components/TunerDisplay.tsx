@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from "react";
+import { useMemo } from "react";
 import type { PitchHistoryEntry, Notation, Accidental } from "@/types";
 import { frequencyToMidi, getNoteNames } from "@/lib/noteUtils";
 
@@ -7,10 +7,164 @@ const MIN_MIDI = 36; // C2
 const MAX_MIDI = 84; // C6
 const MIDI_RANGE = MAX_MIDI - MIN_MIDI;
 
+// SVG viewBox dimensions
+const VIEW_WIDTH = 1000;
+const VIEW_HEIGHT = 480;
+const LABEL_WIDTH = 40;
+const RIGHT_MARGIN = 10;
+
 interface TunerDisplayProps {
   readonly pitchHistory: readonly PitchHistoryEntry[];
   readonly notation: Notation;
   readonly accidental: Accidental;
+}
+
+interface GridLine {
+  readonly midi: number;
+  readonly noteIndex: number;
+  readonly octave: number;
+  readonly y: number;
+  readonly isC: boolean;
+  readonly isNatural: boolean;
+}
+
+function midiToY(midi: number): number {
+  return VIEW_HEIGHT - ((midi - MIN_MIDI) / MIDI_RANGE) * VIEW_HEIGHT;
+}
+
+function timestampToX(timestamp: number, now: number): number {
+  const age = now - timestamp;
+  const progress = age / DISPLAY_DURATION_MS;
+  return VIEW_WIDTH - RIGHT_MARGIN - progress * (VIEW_WIDTH - LABEL_WIDTH - RIGHT_MARGIN);
+}
+
+function buildPitchPath(
+  entries: readonly PitchHistoryEntry[],
+  now: number
+): string {
+  const points: Array<{ readonly x: number; readonly y: number }> = [];
+
+  for (const entry of entries) {
+    const age = now - entry.timestamp;
+    if (age >= DISPLAY_DURATION_MS) continue;
+
+    const midi = frequencyToMidi(entry.frequency);
+    if (midi < MIN_MIDI || midi > MAX_MIDI) continue;
+
+    points.push({
+      x: timestampToX(entry.timestamp, now),
+      y: midiToY(midi),
+    });
+  }
+
+  if (points.length < 2) return "";
+
+  return points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+}
+
+function GridLines({
+  notation,
+  accidental,
+}: {
+  readonly notation: Notation;
+  readonly accidental: Accidental;
+}) {
+  const { lines, notes } = useMemo(() => {
+    const noteNames = getNoteNames(notation, accidental);
+    const gridLines: GridLine[] = [];
+
+    for (let midi = MIN_MIDI; midi <= MAX_MIDI; midi++) {
+      const noteIndex = midi % 12;
+      const octave = Math.floor(midi / 12) - 1;
+      const isC = noteIndex === 0;
+      const isNatural = [0, 2, 4, 5, 7, 9, 11].includes(noteIndex);
+
+      gridLines.push({
+        midi,
+        noteIndex,
+        octave,
+        y: midiToY(midi),
+        isC,
+        isNatural,
+      });
+    }
+
+    return { lines: gridLines, notes: noteNames };
+  }, [notation, accidental]);
+
+  return (
+    <g className="grid-lines">
+      {lines.map((line) => (
+        <g key={line.midi}>
+          <line
+            x1={LABEL_WIDTH}
+            y1={line.y}
+            x2={VIEW_WIDTH}
+            y2={line.y}
+            stroke={line.isC ? "#3f3f46" : "#27272a"}
+            strokeWidth={line.isC ? 2 : 1}
+          />
+          {(line.isNatural || line.isC) && (
+            <text
+              x={LABEL_WIDTH - 5}
+              y={line.y}
+              textAnchor="end"
+              dominantBaseline="middle"
+              fill={line.isC ? "#a1a1aa" : "#52525b"}
+              fontSize="12"
+              fontFamily="system-ui, sans-serif"
+            >
+              {notes[line.noteIndex]}
+              {line.octave}
+            </text>
+          )}
+        </g>
+      ))}
+    </g>
+  );
+}
+
+function CurrentIndicator({
+  entry,
+  now,
+}: {
+  readonly entry: PitchHistoryEntry | undefined;
+  readonly now: number;
+}) {
+  if (!entry || now - entry.timestamp >= 200) {
+    return null;
+  }
+
+  const midi = frequencyToMidi(entry.frequency);
+  if (midi < MIN_MIDI || midi > MAX_MIDI) {
+    return null;
+  }
+
+  const x = VIEW_WIDTH - RIGHT_MARGIN;
+  const y = midiToY(midi);
+
+  return (
+    <g className="current-indicator">
+      {/* Glow effect */}
+      <circle cx={x} cy={y} r={20} fill="url(#glow-gradient)" />
+      {/* Solid dot */}
+      <circle cx={x} cy={y} r={6} fill="#22c55e" />
+    </g>
+  );
+}
+
+function TimeIndicator() {
+  return (
+    <line
+      x1={VIEW_WIDTH - RIGHT_MARGIN}
+      y1={0}
+      x2={VIEW_WIDTH - RIGHT_MARGIN}
+      y2={VIEW_HEIGHT}
+      stroke="#3f3f46"
+      strokeWidth={2}
+      strokeDasharray="5 5"
+    />
+  );
 }
 
 export function TunerDisplay({
@@ -18,180 +172,51 @@ export function TunerDisplay({
   notation,
   accidental,
 }: TunerDisplayProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  // Calculate now once per render - updates come from pitchHistory changes
+  const now = Date.now();
 
-  const draw = useCallback(() => {
-    const canvas = canvasRef.current;
-    const container = containerRef.current;
-    if (!canvas || !container) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    const rect = container.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
-
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
-    ctx.scale(dpr, dpr);
-
-    // Background
-    ctx.fillStyle = "#0a0a0a";
-    ctx.fillRect(0, 0, width, height);
-
-    const notes = getNoteNames(notation, accidental);
-    const now = Date.now();
-    const lineHeight = height / MIDI_RANGE;
-
-    // Draw horizontal lines for each semitone
-    ctx.strokeStyle = "#27272a";
-    ctx.lineWidth = 1;
-    ctx.font = "10px system-ui";
-    ctx.textAlign = "right";
-    ctx.textBaseline = "middle";
-
-    for (let midi = MIN_MIDI; midi <= MAX_MIDI; midi++) {
-      const noteIndex = midi % 12;
-      const octave = Math.floor(midi / 12) - 1;
-      const y = height - (midi - MIN_MIDI) * lineHeight;
-
-      // Highlight C notes
-      if (noteIndex === 0) {
-        ctx.strokeStyle = "#3f3f46";
-        ctx.lineWidth = 2;
-      } else {
-        ctx.strokeStyle = "#27272a";
-        ctx.lineWidth = 1;
-      }
-
-      ctx.beginPath();
-      ctx.moveTo(40, y);
-      ctx.lineTo(width, y);
-      ctx.stroke();
-
-      // Draw note labels on left side (only for natural notes and C)
-      const isNatural = [0, 2, 4, 5, 7, 9, 11].includes(noteIndex);
-      if (isNatural || noteIndex === 0) {
-        ctx.fillStyle = noteIndex === 0 ? "#a1a1aa" : "#52525b";
-        ctx.fillText(`${notes[noteIndex]}${octave}`, 35, y);
-      }
-    }
-
-    // Draw pitch history (karaoke-style scrolling)
-    if (pitchHistory.length > 0) {
-      ctx.strokeStyle = "#22c55e";
-      ctx.lineWidth = 3;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-
-      const relevantHistory = pitchHistory.filter(
-        (entry) => now - entry.timestamp < DISPLAY_DURATION_MS
-      );
-
-      if (relevantHistory.length > 1) {
-        ctx.beginPath();
-        let started = false;
-
-        for (let i = 0; i < relevantHistory.length; i++) {
-          const entry = relevantHistory[i];
-          const midi = frequencyToMidi(entry.frequency);
-
-          if (midi < MIN_MIDI || midi > MAX_MIDI) continue;
-
-          const x =
-            width - ((now - entry.timestamp) / DISPLAY_DURATION_MS) * (width - 40);
-          const y = height - (midi - MIN_MIDI) * lineHeight;
-
-          if (!started) {
-            ctx.moveTo(x, y);
-            started = true;
-          } else {
-            ctx.lineTo(x, y);
-          }
-        }
-
-        ctx.stroke();
-      }
-
-      // Draw current position indicator
-      const lastEntry = relevantHistory[relevantHistory.length - 1];
-      if (lastEntry && now - lastEntry.timestamp < 200) {
-        const midi = frequencyToMidi(lastEntry.frequency);
-        if (midi >= MIN_MIDI && midi <= MAX_MIDI) {
-          const y = height - (midi - MIN_MIDI) * lineHeight;
-
-          // Glowing dot
-          const gradient = ctx.createRadialGradient(
-            width - 10,
-            y,
-            0,
-            width - 10,
-            y,
-            20
-          );
-          gradient.addColorStop(0, "#22c55e");
-          gradient.addColorStop(0.5, "rgba(34, 197, 94, 0.3)");
-          gradient.addColorStop(1, "rgba(34, 197, 94, 0)");
-
-          ctx.fillStyle = gradient;
-          ctx.beginPath();
-          ctx.arc(width - 10, y, 20, 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.fillStyle = "#22c55e";
-          ctx.beginPath();
-          ctx.arc(width - 10, y, 6, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-    }
-
-    // Draw center line (current time indicator)
-    ctx.strokeStyle = "#3f3f46";
-    ctx.lineWidth = 2;
-    ctx.setLineDash([5, 5]);
-    ctx.beginPath();
-    ctx.moveTo(width - 10, 0);
-    ctx.lineTo(width - 10, height);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }, [pitchHistory, notation, accidental]);
-
-  useEffect(() => {
-    let animationId: number;
-
-    const animate = () => {
-      draw();
-      animationId = requestAnimationFrame(animate);
-    };
-
-    animate();
-
-    return () => {
-      cancelAnimationFrame(animationId);
-    };
-  }, [draw]);
-
-  useEffect(() => {
-    const handleResize = () => {
-      draw();
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [draw]);
+  const pathD = buildPitchPath(pitchHistory, now);
+  const lastEntry = pitchHistory[pitchHistory.length - 1];
 
   return (
-    <div
-      ref={containerRef}
-      className="flex-1 min-h-[300px] md:min-h-[400px] rounded-lg border border-zinc-800 overflow-hidden"
-    >
-      <canvas ref={canvasRef} className="w-full h-full" />
+    <div className="h-full w-full rounded-lg border border-zinc-800 overflow-hidden bg-zinc-950">
+      <svg
+        viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
+        preserveAspectRatio="none"
+        className="w-full h-full"
+      >
+        <defs>
+          <radialGradient id="glow-gradient" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#22c55e" stopOpacity="1" />
+            <stop offset="50%" stopColor="#22c55e" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+
+        {/* Background */}
+        <rect width={VIEW_WIDTH} height={VIEW_HEIGHT} fill="#0a0a0a" />
+
+        {/* Grid lines with labels */}
+        <GridLines notation={notation} accidental={accidental} />
+
+        {/* Time indicator (current position line) */}
+        <TimeIndicator />
+
+        {/* Pitch history path */}
+        {pathD && (
+          <path
+            d={pathD}
+            fill="none"
+            stroke="#22c55e"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        )}
+
+        {/* Current pitch indicator */}
+        <CurrentIndicator entry={lastEntry} now={now} />
+      </svg>
     </div>
   );
 }

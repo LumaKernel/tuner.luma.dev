@@ -1,5 +1,5 @@
-import { useRef, useCallback, useEffect } from "react";
-import { set } from "idb-keyval";
+import { useRef, useCallback } from "react";
+import { get, set } from "idb-keyval";
 import type { Recording, PitchHistoryEntry } from "@/types";
 
 const BUFFER_DURATION_SECONDS = 30;
@@ -19,31 +19,28 @@ export function useRecordingBuffer(
 ): RecordingBufferResult {
   const audioBufferRef = useRef<Float32Array[]>([]);
   const pitchHistoryRef = useRef<PitchHistoryEntry[]>([]);
-  const lastTimestampRef = useRef<number>(Date.now());
+  const lastProcessedRef = useRef<Float32Array | null>(null);
 
   const maxSamples = sampleRate * BUFFER_DURATION_SECONDS;
 
-  useEffect(() => {
-    if (!audioData) return;
-
+  // Accumulate audio data during render (if new data)
+  if (audioData && audioData !== lastProcessedRef.current) {
+    lastProcessedRef.current = audioData;
     audioBufferRef.current.push(new Float32Array(audioData));
 
-    // Calculate total samples
+    // Trim oldest chunks if exceeding max
     let totalSamples = 0;
     for (const chunk of audioBufferRef.current) {
       totalSamples += chunk.length;
     }
 
-    // Trim oldest chunks if exceeding max
     while (totalSamples > maxSamples && audioBufferRef.current.length > 1) {
       const removed = audioBufferRef.current.shift();
       if (removed) {
         totalSamples -= removed.length;
       }
     }
-
-    lastTimestampRef.current = Date.now();
-  }, [audioData, maxSamples]);
+  }
 
   const saveRecording = useCallback(async (): Promise<string | null> => {
     if (audioBufferRef.current.length === 0) {
@@ -82,9 +79,7 @@ export function useRecordingBuffer(
 
       // Update recording list
       const listKey = "recording-list";
-      const existingList = (await import("idb-keyval").then((m) =>
-        m.get(listKey)
-      )) as string[] | undefined;
+      const existingList = (await get(listKey)) as string[] | undefined;
       const list = existingList ?? [];
       list.push(id);
       await set(listKey, list);

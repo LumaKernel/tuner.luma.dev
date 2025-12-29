@@ -4,6 +4,7 @@ import { ControlPanel } from "./components/ControlPanel";
 import { PitchInfo } from "./components/PitchInfo";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { RecordingList } from "./components/RecordingList";
+import { StartOverlay } from "./components/StartOverlay";
 import { useAudioInput } from "./hooks/useAudioInput";
 import { usePitchDetection } from "./hooks/usePitchDetection";
 import { useRecordingBuffer } from "./hooks/useRecordingBuffer";
@@ -15,8 +16,7 @@ function TunerApp() {
   const [isRecordingsOpen, setIsRecordingsOpen] = useState(false);
   const settings = useSettings();
 
-  const { isActive, startAudio, stopAudio, audioData, sampleRate } =
-    useAudioInput();
+  const { isActive, startAudio, audioData, sampleRate } = useAudioInput();
 
   const { currentPitch, pitchHistory } = usePitchDetection(
     audioData,
@@ -25,20 +25,24 @@ function TunerApp() {
 
   const { saveRecording } = useRecordingBuffer(audioData, sampleRate);
 
-  const { recordings, deleteRecording, downloadRecording } =
+  const { recordings, refresh, deleteRecording, downloadRecording } =
     useRecordingStorage();
 
   const handleSave = useCallback(() => {
     saveRecording();
   }, [saveRecording]);
 
-  const handleToggleAudio = useCallback(() => {
-    if (isActive) {
-      stopAudio();
-    } else {
-      startAudio();
-    }
-  }, [isActive, startAudio, stopAudio]);
+  const handleStart = useCallback(
+    (deviceId?: string) => {
+      startAudio(deviceId);
+    },
+    [startAudio]
+  );
+
+  const handleOpenRecordings = useCallback(() => {
+    setIsRecordingsOpen(true);
+    refresh(); // Load recordings when dialog opens
+  }, [refresh]);
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col">
@@ -47,7 +51,7 @@ function TunerApp() {
           <h1 className="text-xl font-bold tracking-tight">Tuner</h1>
           <div className="flex gap-2">
             <button
-              onClick={() => setIsRecordingsOpen(true)}
+              onClick={handleOpenRecordings}
               className="px-3 py-1.5 text-sm rounded-md bg-zinc-800 hover:bg-zinc-700 transition-colors"
             >
               録音一覧
@@ -63,25 +67,26 @@ function TunerApp() {
       </header>
 
       <main className="flex-1 flex flex-col p-4 gap-4 max-w-4xl mx-auto w-full">
-        <PitchInfo
-          pitch={currentPitch}
-          notation={settings.state.notation}
-          accidental={settings.state.accidental}
-          movableDo={settings.state.movableDo}
-          baseNote={settings.state.baseNote}
-        />
+        {isActive && (
+          <PitchInfo
+            pitch={currentPitch}
+            notation={settings.state.notation}
+            accidental={settings.state.accidental}
+            movableDo={settings.state.movableDo}
+            baseNote={settings.state.baseNote}
+          />
+        )}
 
-        <TunerDisplay
-          pitchHistory={pitchHistory}
-          notation={settings.state.notation}
-          accidental={settings.state.accidental}
-        />
+        <div className="relative flex-1 min-h-[300px] md:min-h-[400px]">
+          <TunerDisplay
+            pitchHistory={pitchHistory}
+            notation={settings.state.notation}
+            accidental={settings.state.accidental}
+          />
+          {!isActive && <StartOverlay onStart={handleStart} />}
+        </div>
 
-        <ControlPanel
-          isActive={isActive}
-          onToggle={handleToggleAudio}
-          onSave={handleSave}
-        />
+        {isActive && <ControlPanel onSave={handleSave} />}
       </main>
 
       <SettingsDialog

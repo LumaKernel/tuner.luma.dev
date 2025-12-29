@@ -3,7 +3,6 @@ import {
   useContext,
   useState,
   useCallback,
-  useEffect,
   type ReactNode,
 } from "react";
 import { produce } from "immer";
@@ -51,19 +50,17 @@ interface SettingsProviderProps {
 }
 
 export function SettingsProvider({ children }: SettingsProviderProps) {
+  // Load settings lazily on first render
   const [state, setState] = useState<Settings>(loadSettings);
 
   const update = useCallback((updater: (draft: Settings) => void) => {
     setState((current) => {
       const next = produce(current, updater);
+      // Save immediately when updating - no need for useEffect
       saveSettings(next);
       return next;
     });
   }, []);
-
-  useEffect(() => {
-    saveSettings(state);
-  }, [state]);
 
   const value: SettingsContextValue = { state, update };
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { get, set, del } from "idb-keyval";
 import type { Recording, RecordingMeta } from "@/types";
 
@@ -16,7 +16,6 @@ function createWavBlob(audioData: Float32Array, sampleRate: number): Blob {
   const buffer = new ArrayBuffer(bufferSize);
   const view = new DataView(buffer);
 
-  // WAV header
   const writeString = (offset: number, str: string) => {
     for (let i = 0; i < str.length; i++) {
       view.setUint8(offset + i, str.charCodeAt(i));
@@ -37,7 +36,6 @@ function createWavBlob(audioData: Float32Array, sampleRate: number): Blob {
   writeString(36, "data");
   view.setUint32(40, dataSize, true);
 
-  // Audio data
   let offset = 44;
   for (let i = 0; i < audioData.length; i++) {
     const sample = Math.max(-1, Math.min(1, audioData[i]));
@@ -52,6 +50,7 @@ function createWavBlob(audioData: Float32Array, sampleRate: number): Blob {
 interface RecordingStorageResult {
   readonly recordings: readonly RecordingMeta[];
   readonly isLoading: boolean;
+  readonly refresh: () => Promise<void>;
   readonly loadRecording: (id: string) => Promise<Recording | null>;
   readonly deleteRecording: (id: string) => Promise<void>;
   readonly downloadRecording: (id: string) => Promise<void>;
@@ -60,7 +59,7 @@ interface RecordingStorageResult {
 
 export function useRecordingStorage(): RecordingStorageResult {
   const [recordings, setRecordings] = useState<readonly RecordingMeta[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   const cleanupExpired = useCallback(async () => {
     const now = Date.now();
@@ -77,7 +76,6 @@ export function useRecordingStorage(): RecordingStorageResult {
       }
     }
 
-    // Delete expired recordings
     for (const id of expiredIds) {
       await del(`recording-${id}`);
     }
@@ -89,16 +87,15 @@ export function useRecordingStorage(): RecordingStorageResult {
     return validIds;
   }, []);
 
-  const loadRecordingsList = useCallback(async () => {
+  // Refresh is called explicitly when dialog opens, not via useEffect
+  const refresh = useCallback(async () => {
     setIsLoading(true);
     try {
       const validIds = await cleanupExpired();
       const metas: RecordingMeta[] = [];
 
       for (const id of validIds) {
-        const recording = (await get(`recording-${id}`)) as
-          | Recording
-          | undefined;
+        const recording = (await get(`recording-${id}`)) as Recording | undefined;
         if (recording) {
           metas.push({
             id: recording.id,
@@ -118,16 +115,10 @@ export function useRecordingStorage(): RecordingStorageResult {
     }
   }, [cleanupExpired]);
 
-  useEffect(() => {
-    loadRecordingsList();
-  }, [loadRecordingsList]);
-
   const loadRecording = useCallback(
     async (id: string): Promise<Recording | null> => {
       try {
-        const recording = (await get(`recording-${id}`)) as
-          | Recording
-          | undefined;
+        const recording = (await get(`recording-${id}`)) as Recording | undefined;
         return recording ?? null;
       } catch (error) {
         console.error("Failed to load recording:", error);
@@ -146,12 +137,13 @@ export function useRecordingStorage(): RecordingStorageResult {
         const newList = list.filter((item) => item !== id);
         await set(LIST_KEY, newList);
 
-        await loadRecordingsList();
+        // Update local state directly instead of refetching
+        setRecordings((current) => current.filter((r) => r.id !== id));
       } catch (error) {
         console.error("Failed to delete recording:", error);
       }
     },
-    [loadRecordingsList]
+    []
   );
 
   const downloadRecording = useCallback(async (id: string): Promise<void> => {
@@ -198,6 +190,7 @@ export function useRecordingStorage(): RecordingStorageResult {
   return {
     recordings,
     isLoading,
+    refresh,
     loadRecording,
     deleteRecording,
     downloadRecording,

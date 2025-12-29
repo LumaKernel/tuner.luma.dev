@@ -1,17 +1,16 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useRef, useMemo } from "react";
 import type { PitchData, PitchHistoryEntry } from "@/types";
 
 const HISTORY_DURATION_MS = 30000;
 const MIN_FREQUENCY = 60;
 const MAX_FREQUENCY = 2000;
 
-// WASM module state
+// WASM module state - initialized lazily on first use
 let wasmModule: typeof import("@/wasm/pkg/pitch_detector") | null = null;
 let wasmInitPromise: Promise<void> | null = null;
 
-async function initWasm(): Promise<void> {
-  if (wasmModule) return;
-  if (wasmInitPromise) return wasmInitPromise;
+function ensureWasmInit(): void {
+  if (wasmModule || wasmInitPromise) return;
 
   wasmInitPromise = (async () => {
     try {
@@ -24,9 +23,10 @@ async function initWasm(): Promise<void> {
       console.warn("Failed to load WASM, using JavaScript fallback:", error);
     }
   })();
-
-  return wasmInitPromise;
 }
+
+// Trigger WASM init immediately when module loads
+ensureWasmInit();
 
 // JavaScript fallback: YIN algorithm implementation
 function detectPitchJS(buffer: Float32Array, sampleRate: number): number {
@@ -34,7 +34,6 @@ function detectPitchJS(buffer: Float32Array, sampleRate: number): number {
   const bufferSize = buffer.length;
   const halfBufferSize = Math.floor(bufferSize / 2);
 
-  // Step 1: Calculate difference function
   const difference = new Float32Array(halfBufferSize);
   for (let tau = 0; tau < halfBufferSize; tau++) {
     let sum = 0;
@@ -45,7 +44,6 @@ function detectPitchJS(buffer: Float32Array, sampleRate: number): number {
     difference[tau] = sum;
   }
 
-  // Step 2: Cumulative mean normalized difference function
   const cmndf = new Float32Array(halfBufferSize);
   cmndf[0] = 1;
   let runningSum = 0;
@@ -54,7 +52,6 @@ function detectPitchJS(buffer: Float32Array, sampleRate: number): number {
     cmndf[tau] = (difference[tau] * tau) / runningSum;
   }
 
-  // Step 3: Absolute threshold
   let tauEstimate = -1;
   for (let tau = 2; tau < halfBufferSize; tau++) {
     if (cmndf[tau] < threshold) {
@@ -70,7 +67,6 @@ function detectPitchJS(buffer: Float32Array, sampleRate: number): number {
     return -1;
   }
 
-  // Step 4: Parabolic interpolation
   let betterTau: number;
   const x0 = tauEstimate < 1 ? tauEstimate : tauEstimate - 1;
   const x2 = tauEstimate + 1 < halfBufferSize ? tauEstimate + 1 : tauEstimate;
@@ -122,81 +118,58 @@ export function usePitchDetection(
   audioData: Float32Array | null,
   sampleRate: number
 ): PitchDetectionResult {
-  const [currentPitch, setCurrentPitch] = useState<PitchData>({
-    frequency: null,
-    note: null,
-    cents: 0,
-    timestamp: Date.now(),
-  });
-
-  const [pitchHistory, setPitchHistory] = useState<readonly PitchHistoryEntry[]>(
-    []
-  );
-
+  // Ref to accumulate history across renders
   const historyRef = useRef<PitchHistoryEntry[]>([]);
+  const lastProcessedRef = useRef<Float32Array | null>(null);
 
-  // Initialize WASM on mount
-  useEffect(() => {
-    initWasm();
-  }, []);
+  // Process new audio data if it's different from last processed
+  // This runs during render, which is fine for pure computation
+  const now = Date.now();
 
-  const cleanupHistory = useCallback(() => {
-    const now = Date.now();
-    const cutoff = now - HISTORY_DURATION_MS;
-    historyRef.current = historyRef.current.filter(
-      (entry) => entry.timestamp > cutoff
-    );
-    setPitchHistory([...historyRef.current]);
-  }, []);
-
-  useEffect(() => {
-    if (!audioData || audioData.length === 0) {
-      return;
-    }
+  if (audioData && audioData !== lastProcessedRef.current && audioData.length > 0) {
+    lastProcessedRef.current = audioData;
 
     const rms = getRMS(audioData);
-    if (rms < 0.01) {
-      setCurrentPitch({
-        frequency: null,
+    if (rms >= 0.01) {
+      const frequency = detectPitch(audioData, sampleRate);
+      if (frequency > 0) {
+        historyRef.current.push({
+          frequency,
+          timestamp: now,
+        });
+      }
+    }
+  }
+
+  // Filter history during render (pure computation)
+  const cutoff = now - HISTORY_DURATION_MS;
+  const filteredHistory = historyRef.current.filter(
+    (entry) => entry.timestamp > cutoff
+  );
+
+  // Update ref if filtering removed items (to prevent memory leak)
+  if (filteredHistory.length !== historyRef.current.length) {
+    historyRef.current = filteredHistory;
+  }
+
+  // Derive current pitch from latest history entry
+  const currentPitch = useMemo((): PitchData => {
+    const lastEntry = filteredHistory[filteredHistory.length - 1];
+    if (lastEntry && now - lastEntry.timestamp < 200) {
+      return {
+        frequency: lastEntry.frequency,
         note: null,
         cents: 0,
-        timestamp: Date.now(),
-      });
-      return;
-    }
-
-    const frequency = detectPitch(audioData, sampleRate);
-    const now = Date.now();
-
-    if (frequency > 0) {
-      const entry: PitchHistoryEntry = {
-        frequency,
-        timestamp: now,
+        timestamp: lastEntry.timestamp,
       };
-
-      historyRef.current.push(entry);
-      cleanupHistory();
-
-      setCurrentPitch({
-        frequency,
-        note: null,
-        cents: 0,
-        timestamp: now,
-      });
-    } else {
-      setCurrentPitch({
-        frequency: null,
-        note: null,
-        cents: 0,
-        timestamp: now,
-      });
     }
-  }, [audioData, sampleRate, cleanupHistory]);
+    return {
+      frequency: null,
+      note: null,
+      cents: 0,
+      timestamp: now,
+    };
+  }, [filteredHistory, now]);
 
-  useEffect(() => {
-    const interval = setInterval(cleanupHistory, 1000);
-    return () => clearInterval(interval);
-  }, [cleanupHistory]);
-
-  return { currentPitch, pitchHistory };
+  return { currentPitch, pitchHistory: filteredHistory };
 }
