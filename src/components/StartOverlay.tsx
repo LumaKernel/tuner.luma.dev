@@ -1,33 +1,29 @@
-import { useState, useCallback, useEffect } from "react";
-import { useMicrophoneDevices } from "@/hooks/useMicrophoneDevices";
+import { useCallback } from "react";
+import { MicrophoneSelector } from "./MicrophoneSelector";
+import type { AudioDevice } from "@/hooks/useMicrophoneDevices";
 
 interface StartOverlayProps {
-  readonly onStart: (deviceId?: string) => void;
+  readonly devices: readonly AudioDevice[];
+  readonly selectedDeviceId: string;
+  readonly onDeviceChange: (deviceId: string) => void;
+  readonly isLoading: boolean;
+  readonly error: string | null;
+  readonly onRefreshDevices: () => void;
+  readonly onStart: () => void;
 }
 
-export function StartOverlay({ onStart }: StartOverlayProps) {
-  const { devices, isLoading, error, refreshDevices } = useMicrophoneDevices();
-  const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
-  const [hasLoadedDevices, setHasLoadedDevices] = useState(false);
-
-  // Load devices on mount
-  useEffect(() => {
-    if (!hasLoadedDevices) {
-      setHasLoadedDevices(true);
-      refreshDevices();
-    }
-  }, [hasLoadedDevices, refreshDevices]);
-
-  // Select first device when devices are loaded
-  useEffect(() => {
-    if (devices.length > 0 && selectedDeviceId === "") {
-      setSelectedDeviceId(devices[0].deviceId);
-    }
-  }, [devices, selectedDeviceId]);
-
+export function StartOverlay({
+  devices,
+  selectedDeviceId,
+  onDeviceChange,
+  isLoading,
+  error,
+  onRefreshDevices,
+  onStart,
+}: StartOverlayProps) {
   const handleStart = useCallback(() => {
-    onStart(selectedDeviceId || undefined);
-  }, [onStart, selectedDeviceId]);
+    onStart();
+  }, [onStart]);
 
   return (
     <div className="absolute inset-0 bg-zinc-950/95 backdrop-blur-sm flex flex-col items-center justify-center z-10 rounded-lg">
@@ -45,7 +41,14 @@ export function StartOverlay({ onStart }: StartOverlayProps) {
           </div>
         )}
 
-        {isLoading ? (
+        {devices.length > 0 ? (
+          <MicrophoneSelector
+            devices={devices}
+            selectedDeviceId={selectedDeviceId}
+            onDeviceChange={onDeviceChange}
+            isLoading={isLoading}
+          />
+        ) : isLoading ? (
           <div className="flex items-center gap-2 text-zinc-400">
             <svg
               className="animate-spin h-5 w-5"
@@ -69,26 +72,9 @@ export function StartOverlay({ onStart }: StartOverlayProps) {
             </svg>
             <span>マイクを検出中...</span>
           </div>
-        ) : devices.length > 0 ? (
-          <div className="w-full">
-            <label className="block text-sm text-zinc-400 mb-2">
-              マイク選択
-            </label>
-            <select
-              value={selectedDeviceId}
-              onChange={(e) => setSelectedDeviceId(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-            >
-              {devices.map((device) => (
-                <option key={device.deviceId} value={device.deviceId}>
-                  {device.label}
-                </option>
-              ))}
-            </select>
-          </div>
         ) : (
           <button
-            onClick={refreshDevices}
+            onClick={onRefreshDevices}
             className="px-6 py-3 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-100 transition-colors"
           >
             マイクを検出

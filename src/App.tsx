@@ -1,21 +1,25 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { TunerDisplay } from "./components/TunerDisplay";
 import { ControlPanel } from "./components/ControlPanel";
 import { PitchInfo } from "./components/PitchInfo";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { RecordingList } from "./components/RecordingList";
 import { StartOverlay } from "./components/StartOverlay";
+import { MicrophoneSelector } from "./components/MicrophoneSelector";
 import { useAudioInput } from "./hooks/useAudioInput";
 import { usePitchDetection } from "./hooks/usePitchDetection";
 import { useRecordingBuffer } from "./hooks/useRecordingBuffer";
 import { useRecordingStorage } from "./hooks/useRecordingStorage";
+import { useMicrophoneDevices } from "./hooks/useMicrophoneDevices";
 import { useSettings, SettingsProvider } from "./hooks/useSettings";
 
 function TunerApp() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isRecordingsOpen, setIsRecordingsOpen] = useState(false);
+  const [selectedDeviceId, setSelectedDeviceId] = useState("");
   const settings = useSettings();
 
+  const { devices, isLoading, error, refreshDevices } = useMicrophoneDevices();
   const { isActive, startAudio, audioData, sampleRate } = useAudioInput();
 
   const { currentPitch, pitchHistory } = usePitchDetection(
@@ -28,28 +32,59 @@ function TunerApp() {
   const { recordings, refresh, deleteRecording, downloadRecording } =
     useRecordingStorage();
 
+  // Track if we've initialized device selection
+  const initializedRef = useRef(false);
+
+  // Select first device when devices are loaded
+  if (devices.length > 0 && selectedDeviceId === "" && !initializedRef.current) {
+    initializedRef.current = true;
+    setSelectedDeviceId(devices[0].deviceId);
+  }
+
+  // Handle device change while active - restart audio with new device
+  const handleDeviceChange = useCallback(
+    (deviceId: string) => {
+      setSelectedDeviceId(deviceId);
+      if (isActive) {
+        startAudio(deviceId);
+      }
+    },
+    [isActive, startAudio]
+  );
+
   const handleSave = useCallback(() => {
     saveRecording();
   }, [saveRecording]);
 
-  const handleStart = useCallback(
-    (deviceId?: string) => {
-      startAudio(deviceId);
-    },
-    [startAudio]
-  );
+  const handleStart = useCallback(() => {
+    startAudio(selectedDeviceId || undefined);
+  }, [startAudio, selectedDeviceId]);
 
   const handleOpenRecordings = useCallback(() => {
     setIsRecordingsOpen(true);
-    refresh(); // Load recordings when dialog opens
+    refresh();
   }, [refresh]);
+
+  // Load devices on mount
+  useEffect(() => {
+    refreshDevices();
+  }, [refreshDevices]);
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col">
       <header className="p-4 border-b border-zinc-800">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <h1 className="text-xl font-bold tracking-tight">Tuner</h1>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-3">
+            {isActive && (
+              <MicrophoneSelector
+                devices={devices}
+                selectedDeviceId={selectedDeviceId}
+                onDeviceChange={handleDeviceChange}
+                isLoading={isLoading}
+                compact
+              />
+            )}
             <button
               onClick={handleOpenRecordings}
               className="px-3 py-1.5 text-sm rounded-md bg-zinc-800 hover:bg-zinc-700 transition-colors"
@@ -83,7 +118,17 @@ function TunerApp() {
             notation={settings.state.notation}
             accidental={settings.state.accidental}
           />
-          {!isActive && <StartOverlay onStart={handleStart} />}
+          {!isActive && (
+            <StartOverlay
+              devices={devices}
+              selectedDeviceId={selectedDeviceId}
+              onDeviceChange={setSelectedDeviceId}
+              isLoading={isLoading}
+              error={error}
+              onRefreshDevices={refreshDevices}
+              onStart={handleStart}
+            />
+          )}
         </div>
 
         {isActive && <ControlPanel onSave={handleSave} />}
