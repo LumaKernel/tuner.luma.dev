@@ -4,6 +4,7 @@ node_modules/
 # Build outputs
 dist/
 *.local
+*.local.*
 
 # Rust/WASM build outputs
 wasm/pitch-detector/target/
