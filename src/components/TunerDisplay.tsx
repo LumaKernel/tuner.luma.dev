@@ -38,28 +38,44 @@ function timestampToX(timestamp: number, now: number): number {
   return VIEW_WIDTH - RIGHT_MARGIN - progress * (VIEW_WIDTH - LABEL_WIDTH - RIGHT_MARGIN);
 }
 
+// Gap threshold: if time between consecutive points exceeds this, start a new segment
+const GAP_THRESHOLD_MS = 200;
+
+interface PathPoint {
+  readonly x: number;
+  readonly y: number;
+  readonly timestamp: number;
+}
+
 function buildPitchPath(
   entries: readonly PitchHistoryEntry[],
   now: number
 ): string {
-  const points: Array<{ readonly x: number; readonly y: number }> = [];
-
-  for (const entry of entries) {
-    const age = now - entry.timestamp;
-    if (age >= DISPLAY_DURATION_MS) continue;
-
-    const midi = frequencyToMidi(entry.frequency);
-    if (midi < MIN_MIDI || midi > MAX_MIDI) continue;
-
-    points.push({
+  const points: readonly PathPoint[] = entries
+    .filter((entry) => {
+      const age = now - entry.timestamp;
+      if (age >= DISPLAY_DURATION_MS) return false;
+      const midi = frequencyToMidi(entry.frequency);
+      return midi >= MIN_MIDI && midi <= MAX_MIDI;
+    })
+    .map((entry) => ({
       x: timestampToX(entry.timestamp, now),
-      y: midiToY(midi),
-    });
-  }
+      y: midiToY(frequencyToMidi(entry.frequency)),
+      timestamp: entry.timestamp,
+    }));
 
   if (points.length < 2) return "";
 
-  return points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+  // Build path with gaps: start new segment when time gap exceeds threshold
+  return points
+    .map((point, i) => {
+      const prevPoint = points[i - 1];
+      const isNewSegment =
+        i === 0 ||
+        (prevPoint && point.timestamp - prevPoint.timestamp > GAP_THRESHOLD_MS);
+      return `${isNewSegment ? "M" : "L"} ${point.x} ${point.y}`;
+    })
+    .join(" ");
 }
 
 function GridLines({
