@@ -135,9 +135,10 @@ export function getNoteNameWithoutOctave(
 
 export function getBaseNoteDisplay(
   baseNote: number,
+  notation: Notation,
   accidental: Accidental
 ): string {
-  const notes = getNoteNames("letter", accidental);
+  const notes = getNoteNames(notation, accidental);
   return notes[baseNote];
 }
 
