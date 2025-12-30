@@ -100,16 +100,9 @@ export function getNoteNames(
 export function frequencyToNoteName(
   frequency: number,
   notation: Notation,
-  accidental: Accidental,
-  movableDo: boolean = false,
-  baseNote: number = 0
+  accidental: Accidental
 ): string {
-  let noteIndex = frequencyToNoteIndex(frequency);
-
-  if (movableDo && notation === "solfege") {
-    noteIndex = (noteIndex - baseNote + 12) % 12;
-  }
-
+  const noteIndex = frequencyToNoteIndex(frequency);
   const notes = getNoteNames(notation, accidental);
   const octave = frequencyToOctave(frequency);
 
@@ -119,27 +112,9 @@ export function frequencyToNoteName(
 export function getNoteNameWithoutOctave(
   frequency: number,
   notation: Notation,
-  accidental: Accidental,
-  movableDo: boolean = false,
-  baseNote: number = 0
+  accidental: Accidental
 ): string {
-  let noteIndex = frequencyToNoteIndex(frequency);
-
-  if (movableDo && notation === "solfege") {
-    noteIndex = (noteIndex - baseNote + 12) % 12;
-  }
-
+  const noteIndex = frequencyToNoteIndex(frequency);
   const notes = getNoteNames(notation, accidental);
   return notes[noteIndex];
 }
-
-export function getBaseNoteDisplay(
-  baseNote: number,
-  notation: Notation,
-  accidental: Accidental
-): string {
-  const notes = getNoteNames(notation, accidental);
-  return notes[baseNote];
-}
-
-export const BASE_NOTE_OPTIONS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] as const;

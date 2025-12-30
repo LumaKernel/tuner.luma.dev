@@ -9,9 +9,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
 import type { Settings, Notation, Accidental } from "@/types";
-import { getBaseNoteDisplay, BASE_NOTE_OPTIONS } from "@/lib/noteUtils";
 
 interface SettingsDialogProps {
   readonly open: boolean;
@@ -41,24 +39,6 @@ export function SettingsDialog({
     (accidental: Accidental) => {
       onSettingsChange((draft) => {
         draft.accidental = accidental;
-      });
-    },
-    [onSettingsChange]
-  );
-
-  const handleMovableDoChange = useCallback(
-    (movableDo: boolean) => {
-      onSettingsChange((draft) => {
-        draft.movableDo = movableDo;
-      });
-    },
-    [onSettingsChange]
-  );
-
-  const handleBaseNoteChange = useCallback(
-    (baseNote: number) => {
-      onSettingsChange((draft) => {
-        draft.baseNote = baseNote;
       });
     },
     [onSettingsChange]
@@ -128,38 +108,6 @@ export function SettingsDialog({
               </div>
             </RadioGroup>
           </div>
-
-          {/* Movable Do */}
-          <div className="flex items-center justify-between">
-            <Label htmlFor="movable-do">移動ド</Label>
-            <Switch
-              id="movable-do"
-              checked={settings.movableDo}
-              onCheckedChange={handleMovableDoChange}
-            />
-          </div>
-
-          {/* Base Note (only for movable do) */}
-          {settings.movableDo && (
-            <div className="space-y-3">
-              <Label>基準音 (ド = ?)</Label>
-              <div className="grid grid-cols-6 gap-1">
-                {BASE_NOTE_OPTIONS.map((note) => (
-                  <Button
-                    key={note}
-                    variant={
-                      settings.baseNote === note ? "default" : "secondary"
-                    }
-                    size="sm"
-                    onClick={() => handleBaseNoteChange(note)}
-                    className="text-xs"
-                  >
-                    {getBaseNoteDisplay(note, settings.notation, settings.accidental)}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Auto Start */}
           <div className="flex items-center justify-between">

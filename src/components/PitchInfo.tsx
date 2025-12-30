@@ -10,22 +10,18 @@ interface PitchInfoProps {
   readonly pitch: PitchData;
   readonly notation: Notation;
   readonly accidental: Accidental;
-  readonly movableDo: boolean;
-  readonly baseNote: number;
 }
 
 export function PitchInfo({
   pitch,
   notation,
   accidental,
-  movableDo,
-  baseNote,
 }: PitchInfoProps) {
   const hasFrequency = pitch.frequency !== null;
   const frequency = pitch.frequency ?? 0;
   const cents = hasFrequency ? frequencyToCents(frequency) : 0;
   const noteName = hasFrequency
-    ? getNoteNameWithoutOctave(frequency, notation, accidental, movableDo, baseNote)
+    ? getNoteNameWithoutOctave(frequency, notation, accidental)
     : "--";
   const octave = hasFrequency ? frequencyToOctave(frequency) : "";
 

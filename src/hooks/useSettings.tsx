@@ -13,8 +13,6 @@ const STORAGE_KEY = "tuner-settings";
 const defaultSettings: Settings = {
   notation: "letter",
   accidental: "sharp",
-  movableDo: false,
-  baseNote: 0,
   recordingDuration: 30,
   autoStart: false,
 };

@@ -150,8 +150,6 @@ function TunerApp() {
               pitch={currentPitch}
               notation={settings.state.notation}
               accidental={settings.state.accidental}
-              movableDo={settings.state.movableDo}
-              baseNote={settings.state.baseNote}
             />
             <VolumeLevel volume={volumeLevel} />
           </>
