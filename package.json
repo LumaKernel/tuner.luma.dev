@@ -4,8 +4,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite dev --port 5002",
     "build": "tsc -b && vite build",
+    "typecheck": "tsc -b --noEmit",
     "preview": "vite preview",
     "build:wasm": "cd wasm/pitch-detector && wasm-pack build --target web --out-dir ../../src/wasm/pkg"
   },
