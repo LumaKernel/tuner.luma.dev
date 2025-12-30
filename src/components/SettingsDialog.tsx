@@ -64,6 +64,15 @@ export function SettingsDialog({
     [onSettingsChange]
   );
 
+  const handleAutoStartChange = useCallback(
+    (autoStart: boolean) => {
+      onSettingsChange((draft) => {
+        draft.autoStart = autoStart;
+      });
+    },
+    [onSettingsChange]
+  );
+
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="sm:max-w-md">
@@ -151,6 +160,16 @@ export function SettingsDialog({
               </div>
             </div>
           )}
+
+          {/* Auto Start */}
+          <div className="flex items-center justify-between">
+            <Label htmlFor="auto-start-setting">次回から自動で開始する</Label>
+            <Switch
+              id="auto-start-setting"
+              checked={settings.autoStart}
+              onCheckedChange={handleAutoStartChange}
+            />
+          </div>
         </div>
       </DialogContent>
     </Dialog>

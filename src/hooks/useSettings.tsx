@@ -16,6 +16,7 @@ const defaultSettings: Settings = {
   movableDo: false,
   baseNote: 0,
   recordingDuration: 30,
+  autoStart: false,
 };
 
 function loadSettings(): Settings {

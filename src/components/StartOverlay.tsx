@@ -1,6 +1,8 @@
 import { useCallback } from "react";
 import { Loader2, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { MicrophoneSelector } from "./MicrophoneSelector";
 import type { AudioDevice } from "@/hooks/useMicrophoneDevices";
 
@@ -12,6 +14,8 @@ interface StartOverlayProps {
   readonly error: string | null;
   readonly onRefreshDevices: () => void;
   readonly onStart: () => void;
+  readonly autoStart: boolean;
+  readonly onAutoStartChange: (autoStart: boolean) => void;
 }
 
 export function StartOverlay({
@@ -22,6 +26,8 @@ export function StartOverlay({
   error,
   onRefreshDevices,
   onStart,
+  autoStart,
+  onAutoStartChange,
 }: StartOverlayProps) {
   const handleStart = useCallback(() => {
     onStart();
@@ -62,10 +68,27 @@ export function StartOverlay({
         )}
 
         {devices.length > 0 && (
-          <Button onClick={handleStart} size="lg" className="w-full">
-            <Play />
-            開始
-          </Button>
+          <>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="auto-start"
+                checked={autoStart}
+                onCheckedChange={(checked) =>
+                  onAutoStartChange(checked === true)
+                }
+              />
+              <Label
+                htmlFor="auto-start"
+                className="text-sm text-muted-foreground cursor-pointer"
+              >
+                次回から自動で開始する
+              </Label>
+            </div>
+            <Button onClick={handleStart} size="lg" className="w-full">
+              <Play />
+              開始
+            </Button>
+          </>
         )}
       </div>
     </div>

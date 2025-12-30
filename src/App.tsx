@@ -78,10 +78,36 @@ function TunerApp() {
     refresh();
   }, [refresh]);
 
+  const handleAutoStartChange = useCallback(
+    (autoStart: boolean) => {
+      settings.update((draft) => {
+        draft.autoStart = autoStart;
+      });
+    },
+    [settings]
+  );
+
+  // Track if we've attempted auto-start
+  const autoStartAttemptedRef = useRef(false);
+
   // Load devices on mount
   useEffect(() => {
     refreshDevices();
   }, [refreshDevices]);
+
+  // Auto-start when enabled and devices are loaded
+  useEffect(() => {
+    if (
+      settings.state.autoStart &&
+      devices.length > 0 &&
+      selectedDeviceId !== "" &&
+      !isActive &&
+      !autoStartAttemptedRef.current
+    ) {
+      autoStartAttemptedRef.current = true;
+      startAudio(selectedDeviceId);
+    }
+  }, [settings.state.autoStart, devices.length, selectedDeviceId, isActive, startAudio]);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -144,6 +170,8 @@ function TunerApp() {
               error={error}
               onRefreshDevices={refreshDevices}
               onStart={handleStart}
+              autoStart={settings.state.autoStart}
+              onAutoStartChange={handleAutoStartChange}
             />
           )}
         </div>

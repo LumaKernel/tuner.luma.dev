@@ -19,6 +19,7 @@ export interface Settings {
   readonly movableDo: boolean;
   readonly baseNote: number; // 0-11 (C=0, C#=1, ..., B=11)
   readonly recordingDuration: number; // seconds (30, 60, 120, or custom)
+  readonly autoStart: boolean; // 次回から自動で開始する
 }
 
 export interface Recording {
