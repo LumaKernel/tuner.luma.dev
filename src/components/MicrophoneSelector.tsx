@@ -1,3 +1,12 @@
+import { Mic } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import type { AudioDevice } from "@/hooks/useMicrophoneDevices";
 
 interface MicrophoneSelectorProps {
@@ -17,7 +26,7 @@ export function MicrophoneSelector({
 }: MicrophoneSelectorProps) {
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 text-zinc-400 text-sm">
+      <div className="flex items-center gap-2 text-muted-foreground text-sm">
         <svg
           className="animate-spin h-4 w-4"
           xmlns="http://www.w3.org/2000/svg"
@@ -48,41 +57,25 @@ export function MicrophoneSelector({
   }
 
   return (
-    <div className={compact ? "flex items-center gap-2" : "w-full"}>
-      {!compact && (
-        <label className="block text-sm text-zinc-400 mb-2">マイク選択</label>
-      )}
+    <div className={compact ? "flex items-center gap-2" : "w-full space-y-2"}>
+      {!compact && <Label>マイク選択</Label>}
       <div className="flex items-center gap-2">
-        {compact && (
-          <svg
-            className="w-4 h-4 text-zinc-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        {compact && <Mic className="w-4 h-4 text-muted-foreground" />}
+        <Select value={selectedDeviceId} onValueChange={onDeviceChange}>
+          <SelectTrigger
+            size={compact ? "sm" : "default"}
+            className={compact ? "w-auto" : "w-full"}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-            />
-          </svg>
-        )}
-        <select
-          value={selectedDeviceId}
-          onChange={(e) => onDeviceChange(e.target.value)}
-          className={`
-            ${compact ? "px-2 py-1 text-sm" : "w-full px-4 py-3"}
-            rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-100
-            focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent
-          `}
-        >
-          {devices.map((device) => (
-            <option key={device.deviceId} value={device.deviceId}>
-              {device.label}
-            </option>
-          ))}
-        </select>
+            <SelectValue placeholder="マイクを選択" />
+          </SelectTrigger>
+          <SelectContent>
+            {devices.map((device) => (
+              <SelectItem key={device.deviceId} value={device.deviceId}>
+                {device.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     </div>
   );

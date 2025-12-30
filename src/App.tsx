@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
+import { ListMusic, Settings } from "lucide-react";
 import { TunerDisplay } from "./components/TunerDisplay";
 import { ControlPanel } from "./components/ControlPanel";
 import { PitchInfo } from "./components/PitchInfo";
@@ -6,6 +7,7 @@ import { SettingsDialog } from "./components/SettingsDialog";
 import { RecordingList } from "./components/RecordingList";
 import { StartOverlay } from "./components/StartOverlay";
 import { MicrophoneSelector } from "./components/MicrophoneSelector";
+import { Button } from "./components/ui/button";
 import { useAudioInput } from "./hooks/useAudioInput";
 import { usePitchDetection } from "./hooks/usePitchDetection";
 import { useRecordingBuffer } from "./hooks/useRecordingBuffer";
@@ -71,11 +73,11 @@ function TunerApp() {
   }, [refreshDevices]);
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col">
-      <header className="p-4 border-b border-zinc-800">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
+      <header className="p-4 border-b">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <h1 className="text-xl font-bold tracking-tight">Tuner</h1>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {isActive && (
               <MicrophoneSelector
                 devices={devices}
@@ -85,18 +87,18 @@ function TunerApp() {
                 compact
               />
             )}
-            <button
-              onClick={handleOpenRecordings}
-              className="px-3 py-1.5 text-sm rounded-md bg-zinc-800 hover:bg-zinc-700 transition-colors"
-            >
+            <Button variant="ghost" size="sm" onClick={handleOpenRecordings}>
+              <ListMusic />
               録音一覧
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setIsSettingsOpen(true)}
-              className="px-3 py-1.5 text-sm rounded-md bg-zinc-800 hover:bg-zinc-700 transition-colors"
             >
+              <Settings />
               設定
-            </button>
+            </Button>
           </div>
         </div>
       </header>

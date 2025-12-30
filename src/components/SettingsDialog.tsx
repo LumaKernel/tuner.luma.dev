@@ -1,4 +1,14 @@
 import { useCallback } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 import type { Settings, Notation, Accidental } from "@/types";
 import { getBaseNoteDisplay, BASE_NOTE_OPTIONS } from "@/lib/noteUtils";
 
@@ -51,139 +61,99 @@ export function SettingsDialog({
     [onSettingsChange]
   );
 
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div className="relative bg-zinc-900 rounded-lg border border-zinc-800 p-6 w-full max-w-md mx-4 shadow-xl">
-        <h2 className="text-xl font-bold mb-6">設定</h2>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>設定</DialogTitle>
+        </DialogHeader>
 
-        {/* Notation */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-zinc-400 mb-2">
-            表記法
-          </label>
-          <div className="flex gap-2">
-            <button
-              onClick={() => handleNotationChange("letter")}
-              className={`flex-1 py-2 px-4 rounded-lg transition-colors ${
-                settings.notation === "letter"
-                  ? "bg-green-600 text-white"
-                  : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
-              }`}
+        <div className="space-y-6">
+          {/* Notation */}
+          <div className="space-y-3">
+            <Label>表記法</Label>
+            <RadioGroup
+              value={settings.notation}
+              onValueChange={(value) => handleNotationChange(value as Notation)}
+              className="flex gap-4"
             >
-              CDEFGAB
-            </button>
-            <button
-              onClick={() => handleNotationChange("solfege")}
-              className={`flex-1 py-2 px-4 rounded-lg transition-colors ${
-                settings.notation === "solfege"
-                  ? "bg-green-600 text-white"
-                  : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
-              }`}
-            >
-              ドレミ
-            </button>
-          </div>
-        </div>
-
-        {/* Accidental */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-zinc-400 mb-2">
-            変化記号
-          </label>
-          <div className="flex gap-2">
-            <button
-              onClick={() => handleAccidentalChange("sharp")}
-              className={`flex-1 py-2 px-4 rounded-lg transition-colors ${
-                settings.accidental === "sharp"
-                  ? "bg-green-600 text-white"
-                  : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
-              }`}
-            >
-              ♯ シャープ
-            </button>
-            <button
-              onClick={() => handleAccidentalChange("flat")}
-              className={`flex-1 py-2 px-4 rounded-lg transition-colors ${
-                settings.accidental === "flat"
-                  ? "bg-green-600 text-white"
-                  : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
-              }`}
-            >
-              ♭ フラット
-            </button>
-          </div>
-        </div>
-
-        {/* Movable Do */}
-        {settings.notation === "solfege" && (
-          <>
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-zinc-400 mb-2">
-                移動ド
-              </label>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleMovableDoChange(false)}
-                  className={`flex-1 py-2 px-4 rounded-lg transition-colors ${
-                    !settings.movableDo
-                      ? "bg-green-600 text-white"
-                      : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
-                  }`}
-                >
-                  固定ド
-                </button>
-                <button
-                  onClick={() => handleMovableDoChange(true)}
-                  className={`flex-1 py-2 px-4 rounded-lg transition-colors ${
-                    settings.movableDo
-                      ? "bg-green-600 text-white"
-                      : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
-                  }`}
-                >
-                  移動ド
-                </button>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="letter" id="notation-letter" />
+                <Label htmlFor="notation-letter" className="cursor-pointer">
+                  CDEFGAB
+                </Label>
               </div>
-            </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="solfege" id="notation-solfege" />
+                <Label htmlFor="notation-solfege" className="cursor-pointer">
+                  ドレミ
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
 
-            {/* Base Note (only for movable do) */}
-            {settings.movableDo && (
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-zinc-400 mb-2">
-                  基準音 (ド = ?)
-                </label>
-                <div className="grid grid-cols-6 gap-1">
-                  {BASE_NOTE_OPTIONS.map((note) => (
-                    <button
-                      key={note}
-                      onClick={() => handleBaseNoteChange(note)}
-                      className={`py-2 px-2 rounded text-sm transition-colors ${
-                        settings.baseNote === note
-                          ? "bg-green-600 text-white"
-                          : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
-                      }`}
-                    >
-                      {getBaseNoteDisplay(note, settings.accidental)}
-                    </button>
-                  ))}
+          {/* Accidental */}
+          <div className="space-y-3">
+            <Label>変化記号</Label>
+            <RadioGroup
+              value={settings.accidental}
+              onValueChange={(value) =>
+                handleAccidentalChange(value as Accidental)
+              }
+              className="flex gap-4"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="sharp" id="accidental-sharp" />
+                <Label htmlFor="accidental-sharp" className="cursor-pointer">
+                  ♯ シャープ
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="flat" id="accidental-flat" />
+                <Label htmlFor="accidental-flat" className="cursor-pointer">
+                  ♭ フラット
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          {/* Movable Do (only for solfege) */}
+          {settings.notation === "solfege" && (
+            <>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="movable-do">移動ド</Label>
+                <Switch
+                  id="movable-do"
+                  checked={settings.movableDo}
+                  onCheckedChange={handleMovableDoChange}
+                />
+              </div>
+
+              {/* Base Note (only for movable do) */}
+              {settings.movableDo && (
+                <div className="space-y-3">
+                  <Label>基準音 (ド = ?)</Label>
+                  <div className="grid grid-cols-6 gap-1">
+                    {BASE_NOTE_OPTIONS.map((note) => (
+                      <Button
+                        key={note}
+                        variant={
+                          settings.baseNote === note ? "default" : "secondary"
+                        }
+                        size="sm"
+                        onClick={() => handleBaseNoteChange(note)}
+                        className="text-xs"
+                      >
+                        {getBaseNoteDisplay(note, settings.accidental)}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </>
-        )}
-
-        <button
-          onClick={onClose}
-          className="w-full py-2 px-4 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors"
-        >
-          閉じる
-        </button>
-      </div>
-    </div>
+              )}
+            </>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

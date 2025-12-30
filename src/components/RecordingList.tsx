@@ -1,3 +1,12 @@
+import { Download, Trash2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import type { RecordingMeta } from "@/types";
 
 interface RecordingListProps {
@@ -46,24 +55,19 @@ export function RecordingList({
   onDelete,
   onDownload,
 }: RecordingListProps) {
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div className="relative bg-zinc-900 rounded-lg border border-zinc-800 p-6 w-full max-w-lg mx-4 shadow-xl max-h-[80vh] flex flex-col">
-        <h2 className="text-xl font-bold mb-4">録音一覧</h2>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="sm:max-w-lg max-h-[80vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>録音一覧</DialogTitle>
+          <DialogDescription>
+            録音は7日間保存されます。期限が切れると自動的に削除されます。
+          </DialogDescription>
+        </DialogHeader>
 
-        <p className="text-sm text-zinc-500 mb-4">
-          録音は7日間保存されます。期限が切れると自動的に削除されます。
-        </p>
-
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto -mx-6 px-6">
           {recordings.length === 0 ? (
-            <div className="text-center py-8 text-zinc-500">
+            <div className="text-center py-8 text-muted-foreground">
               録音がありません
             </div>
           ) : (
@@ -71,47 +75,42 @@ export function RecordingList({
               {recordings.map((recording) => (
                 <div
                   key={recording.id}
-                  className="bg-zinc-800 rounded-lg p-3 flex items-center justify-between gap-3"
+                  className="bg-muted rounded-lg p-3 flex items-center justify-between gap-3"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate">
                       {formatDate(recording.createdAt)}
                     </div>
-                    <div className="flex gap-3 text-xs text-zinc-500">
+                    <div className="flex gap-3 text-xs text-muted-foreground">
                       <span>{formatDuration(recording.duration)}</span>
-                      <span className="text-yellow-600">
+                      <span className="text-yellow-500">
                         {formatTimeRemaining(recording.expiresAt)}
                       </span>
                     </div>
                   </div>
 
                   <div className="flex gap-2">
-                    <button
+                    <Button
+                      variant="secondary"
+                      size="sm"
                       onClick={() => onDownload(recording.id)}
-                      className="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 rounded transition-colors"
                     >
-                      DL
-                    </button>
-                    <button
+                      <Download className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
                       onClick={() => onDelete(recording.id)}
-                      className="px-3 py-1.5 text-sm bg-red-600 hover:bg-red-700 rounded transition-colors"
                     >
-                      削除
-                    </button>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               ))}
             </div>
           )}
         </div>
-
-        <button
-          onClick={onClose}
-          className="mt-4 w-full py-2 px-4 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors"
-        >
-          閉じる
-        </button>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

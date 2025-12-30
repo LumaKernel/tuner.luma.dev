@@ -179,7 +179,7 @@ export function TunerDisplay({
   const lastEntry = pitchHistory[pitchHistory.length - 1];
 
   return (
-    <div className="h-full w-full rounded-lg border border-zinc-800 overflow-hidden bg-zinc-950">
+    <div className="h-full w-full rounded-lg border overflow-hidden bg-card">
       <svg
         viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
         preserveAspectRatio="none"
