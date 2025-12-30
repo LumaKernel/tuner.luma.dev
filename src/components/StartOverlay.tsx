@@ -31,7 +31,7 @@ export function StartOverlay({
     <div className="absolute inset-0 bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center z-10 rounded-lg border">
       <div className="flex flex-col items-center gap-6 p-8 max-w-sm w-full">
         <div className="text-center">
-          <h2 className="text-2xl font-bold mb-2">チューナー</h2>
+          <h2 className="text-2xl font-bold mb-2">tuner.luma.dev</h2>
           <p className="text-muted-foreground text-sm">
             マイクを選択して開始してください
           </p>

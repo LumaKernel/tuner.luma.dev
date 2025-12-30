@@ -87,7 +87,7 @@ function TunerApp() {
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <header className="p-4 border-b">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <h1 className="text-xl font-bold tracking-tight">Tuner</h1>
+          <h1 className="text-xl font-bold tracking-tight">tuner.luma.dev</h1>
           <div className="flex items-center gap-2">
             {isActive && (
               <MicrophoneSelector
