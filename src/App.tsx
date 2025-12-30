@@ -8,6 +8,8 @@ import { RecordingList } from "./components/RecordingList";
 import { StartOverlay } from "./components/StartOverlay";
 import { MicrophoneSelector } from "./components/MicrophoneSelector";
 import { VolumeLevel } from "./components/VolumeLevel";
+import { ModeToggle } from "./components/mode-toggle";
+import { ThemeProvider } from "./components/theme-provider";
 import { Button } from "./components/ui/button";
 import { useAudioInput } from "./hooks/useAudioInput";
 import { usePitchDetection } from "./hooks/usePitchDetection";
@@ -104,6 +106,7 @@ function TunerApp() {
               <Settings />
               設定
             </Button>
+            <ModeToggle />
           </div>
         </div>
       </header>
@@ -164,8 +167,10 @@ function TunerApp() {
 
 export function App() {
   return (
-    <SettingsProvider>
-      <TunerApp />
-    </SettingsProvider>
+    <ThemeProvider defaultTheme="system" storageKey="tuner-ui-theme">
+      <SettingsProvider>
+        <TunerApp />
+      </SettingsProvider>
+    </ThemeProvider>
   );
 }
