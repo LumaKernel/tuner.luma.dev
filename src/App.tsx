@@ -89,16 +89,18 @@ function TunerApp() {
 
   // Track if we've attempted auto-start
   const autoStartAttemptedRef = useRef(false);
+  // Capture autoStart setting at mount time (don't react to changes)
+  const initialAutoStartRef = useRef(settings.state.autoStart);
 
   // Load devices on mount
   useEffect(() => {
     refreshDevices();
   }, [refreshDevices]);
 
-  // Auto-start when enabled and devices are loaded
+  // Auto-start only on initial page load (not when checkbox is changed)
   useEffect(() => {
     if (
-      settings.state.autoStart &&
+      initialAutoStartRef.current &&
       devices.length > 0 &&
       selectedDeviceId !== "" &&
       !isActive &&
@@ -107,7 +109,7 @@ function TunerApp() {
       autoStartAttemptedRef.current = true;
       startAudio(selectedDeviceId);
     }
-  }, [settings.state.autoStart, devices.length, selectedDeviceId, isActive, startAudio]);
+  }, [devices.length, selectedDeviceId, isActive, startAudio]);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">

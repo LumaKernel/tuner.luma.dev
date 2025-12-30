@@ -69,6 +69,10 @@ export function StartOverlay({
 
         {devices.length > 0 && (
           <>
+            <Button onClick={handleStart} size="lg" className="w-full">
+              <Play />
+              開始
+            </Button>
             <div className="flex items-center gap-2">
               <Checkbox
                 id="auto-start"
@@ -84,10 +88,6 @@ export function StartOverlay({
                 次回から自動で開始する
               </Label>
             </div>
-            <Button onClick={handleStart} size="lg" className="w-full">
-              <Play />
-              開始
-            </Button>
           </>
         )}
       </div>
