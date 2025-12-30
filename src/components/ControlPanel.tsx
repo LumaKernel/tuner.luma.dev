@@ -65,15 +65,12 @@ export function ControlPanel({
     if (value !== "custom") {
       onDurationChange(parseInt(value, 10));
     } else {
-      // Keep current custom values or set defaults
-      const customDuration = customMinutes * 60 + customSeconds;
-      if (customDuration > 0) {
-        onDurationChange(customDuration);
-      } else {
-        setCustomMinutes(1);
-        setCustomSeconds(0);
-        onDurationChange(60);
-      }
+      // Initialize custom inputs from current duration
+      const mins = Math.floor(recordingDuration / 60);
+      const secs = recordingDuration % 60;
+      setCustomMinutes(mins);
+      setCustomSeconds(secs);
+      // Duration doesn't change when switching to custom
     }
   };
 
