@@ -78,8 +78,8 @@ function ChannelGauge({ label, channel }: ChannelGaugeProps) {
           <span className="text-[8px] text-white/50 mix-blend-difference">0</span>
         </div>
       </div>
-      <span className="text-xs font-mono tabular-nums w-16 text-right shrink-0 whitespace-pre">
-        {formatDb(channel.dB)} dB
+      <span className="text-xs font-mono tabular-nums w-20 text-right shrink-0 whitespace-pre">
+        {formatDb(channel.dB)} dBFS
       </span>
     </div>
   );
@@ -143,8 +143,8 @@ export function VolumeLevel({ volume }: VolumeLevelProps) {
             <span className="text-[8px] text-white/50 mix-blend-difference">0</span>
           </div>
         </div>
-        <span className="text-xs font-mono tabular-nums w-16 text-right shrink-0 whitespace-pre">
-          {formatDb(volume.mono.dB)} dB
+        <span className="text-xs font-mono tabular-nums w-20 text-right shrink-0 whitespace-pre">
+          {formatDb(volume.mono.dB)} dBFS
         </span>
       </div>
     </div>
