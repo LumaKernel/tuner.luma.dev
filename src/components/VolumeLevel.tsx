@@ -35,10 +35,18 @@ interface ChannelGaugeProps {
   readonly channel: ChannelVolume;
 }
 
+// dBを固定幅形式で表示（例: "-40.0", " -5.2"）
+function formatDb(db: number): string {
+  // 常に数値で表示（-60以下も-60.0として表示）
+  const clamped = Math.max(MIN_DB, db);
+  const formatted = clamped.toFixed(1);
+  // 符号と桁数を揃える（-60.0〜0.0の範囲で5文字固定）
+  return formatted.padStart(5, " ");
+}
+
 function ChannelGauge({ label, channel }: ChannelGaugeProps) {
   const level = normalizeDb(channel.dB);
   const peakLevel = normalizeDb(channel.peakDb);
-  const displayDb = channel.dB > MIN_DB ? channel.dB.toFixed(1) : "-∞";
 
   return (
     <div className="flex items-center gap-2">
@@ -70,8 +78,8 @@ function ChannelGauge({ label, channel }: ChannelGaugeProps) {
           <span className="text-[8px] text-white/50 mix-blend-difference">0</span>
         </div>
       </div>
-      <span className="text-xs font-mono w-14 text-right shrink-0">
-        {displayDb} dB
+      <span className="text-xs font-mono tabular-nums w-16 text-right shrink-0 whitespace-pre">
+        {formatDb(channel.dB)} dB
       </span>
     </div>
   );
@@ -135,8 +143,8 @@ export function VolumeLevel({ volume }: VolumeLevelProps) {
             <span className="text-[8px] text-white/50 mix-blend-difference">0</span>
           </div>
         </div>
-        <span className="text-xs font-mono w-14 text-right shrink-0">
-          {volume.mono.dB > MIN_DB ? volume.mono.dB.toFixed(1) : "-∞"} dB
+        <span className="text-xs font-mono tabular-nums w-16 text-right shrink-0 whitespace-pre">
+          {formatDb(volume.mono.dB)} dB
         </span>
       </div>
     </div>
