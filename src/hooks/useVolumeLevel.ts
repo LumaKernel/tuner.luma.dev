@@ -1,32 +1,32 @@
 import { useMemo } from "react";
 
-interface StereoAudioData {
+type StereoAudioData = {
   readonly left: Float32Array;
   readonly right: Float32Array;
   readonly mono: Float32Array;
-}
+};
 
-interface ChannelVolume {
+type ChannelVolume = {
   readonly rms: number;
   readonly dB: number;
   readonly peak: number;
   readonly peakDb: number;
-}
+};
 
-interface VolumeLevel {
+type VolumeLevel = {
   readonly left: ChannelVolume;
   readonly right: ChannelVolume;
   readonly mono: ChannelVolume;
   readonly isStereo: boolean;
-}
+};
 
 const MIN_DB = -60;
 
 function calculateRMS(buffer: Float32Array): number {
   if (buffer.length === 0) return 0;
   let sum = 0;
-  for (let i = 0; i < buffer.length; i++) {
-    sum += buffer[i] * buffer[i];
+  for (const value of buffer) {
+    sum += value * value;
   }
   return Math.sqrt(sum / buffer.length);
 }
@@ -34,8 +34,8 @@ function calculateRMS(buffer: Float32Array): number {
 function calculatePeak(buffer: Float32Array): number {
   if (buffer.length === 0) return 0;
   let max = 0;
-  for (let i = 0; i < buffer.length; i++) {
-    const abs = Math.abs(buffer[i]);
+  for (const value of buffer) {
+    const abs = Math.abs(value);
     if (abs > max) max = abs;
   }
   return max;
@@ -69,7 +69,7 @@ function arraysEqual(a: Float32Array, b: Float32Array): boolean {
 }
 
 export function useVolumeLevel(
-  stereoData: StereoAudioData | null
+  stereoData: StereoAudioData | null,
 ): VolumeLevel | null {
   return useMemo(() => {
     if (!stereoData) return null;

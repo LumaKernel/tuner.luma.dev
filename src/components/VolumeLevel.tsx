@@ -1,20 +1,20 @@
-interface ChannelVolume {
+type ChannelVolume = {
   readonly rms: number;
   readonly dB: number;
   readonly peak: number;
   readonly peakDb: number;
-}
+};
 
-interface VolumeLevel {
+type VolumeLevel = {
   readonly left: ChannelVolume;
   readonly right: ChannelVolume;
   readonly mono: ChannelVolume;
   readonly isStereo: boolean;
-}
+};
 
-interface VolumeLevelProps {
+type VolumeLevelProps = {
   readonly volume: VolumeLevel | null;
-}
+};
 
 const MIN_DB = -60;
 const MAX_DB = 0;
@@ -30,10 +30,10 @@ function getGaugeGradient(): string {
   return "linear-gradient(to right, #22c55e 0%, #22c55e 60%, #eab308 75%, #ef4444 90%, #ef4444 100%)";
 }
 
-interface ChannelGaugeProps {
+type ChannelGaugeProps = {
   readonly label: string;
   readonly channel: ChannelVolume;
-}
+};
 
 // dBを固定幅形式で表示（例: "-40.0", " -5.2"）
 function formatDb(db: number): string {
@@ -50,7 +50,9 @@ function ChannelGauge({ label, channel }: ChannelGaugeProps) {
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs text-muted-foreground w-4 shrink-0">{label}</span>
+      <span className="text-xs text-muted-foreground w-4 shrink-0">
+        {label}
+      </span>
       <div className="relative flex-1 h-4 bg-muted rounded overflow-hidden">
         {/* グラデーション背景（薄く表示） */}
         <div
@@ -72,10 +74,18 @@ function ChannelGauge({ label, channel }: ChannelGaugeProps) {
         />
         {/* dB目盛り */}
         <div className="absolute inset-0 flex items-center justify-between px-1">
-          <span className="text-[8px] text-white/50 mix-blend-difference">-60</span>
-          <span className="text-[8px] text-white/50 mix-blend-difference">-40</span>
-          <span className="text-[8px] text-white/50 mix-blend-difference">-20</span>
-          <span className="text-[8px] text-white/50 mix-blend-difference">0</span>
+          <span className="text-[8px] text-white/50 mix-blend-difference">
+            -60
+          </span>
+          <span className="text-[8px] text-white/50 mix-blend-difference">
+            -40
+          </span>
+          <span className="text-[8px] text-white/50 mix-blend-difference">
+            -20
+          </span>
+          <span className="text-[8px] text-white/50 mix-blend-difference">
+            0
+          </span>
         </div>
       </div>
       <span className="text-xs font-mono tabular-nums w-20 text-right shrink-0 whitespace-pre">
@@ -137,10 +147,18 @@ export function VolumeLevel({ volume }: VolumeLevelProps) {
           />
           {/* dB目盛り */}
           <div className="absolute inset-0 flex items-center justify-between px-1">
-            <span className="text-[8px] text-white/50 mix-blend-difference">-60</span>
-            <span className="text-[8px] text-white/50 mix-blend-difference">-40</span>
-            <span className="text-[8px] text-white/50 mix-blend-difference">-20</span>
-            <span className="text-[8px] text-white/50 mix-blend-difference">0</span>
+            <span className="text-[8px] text-white/50 mix-blend-difference">
+              -60
+            </span>
+            <span className="text-[8px] text-white/50 mix-blend-difference">
+              -40
+            </span>
+            <span className="text-[8px] text-white/50 mix-blend-difference">
+              -20
+            </span>
+            <span className="text-[8px] text-white/50 mix-blend-difference">
+              0
+            </span>
           </div>
         </div>
         <span className="text-xs font-mono tabular-nums w-20 text-right shrink-0 whitespace-pre">

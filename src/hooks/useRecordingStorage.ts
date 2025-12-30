@@ -37,8 +37,8 @@ function createWavBlob(audioData: Float32Array, sampleRate: number): Blob {
   view.setUint32(40, dataSize, true);
 
   let offset = 44;
-  for (let i = 0; i < audioData.length; i++) {
-    const sample = Math.max(-1, Math.min(1, audioData[i]));
+  for (const value of audioData) {
+    const sample = Math.max(-1, Math.min(1, value));
     const intSample = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
     view.setInt16(offset, intSample, true);
     offset += 2;
@@ -47,7 +47,7 @@ function createWavBlob(audioData: Float32Array, sampleRate: number): Blob {
   return new Blob([buffer], { type: "audio/wav" });
 }
 
-interface RecordingStorageResult {
+type RecordingStorageResult = {
   readonly recordings: readonly RecordingMeta[];
   readonly isLoading: boolean;
   readonly refresh: () => Promise<void>;
@@ -55,7 +55,7 @@ interface RecordingStorageResult {
   readonly deleteRecording: (id: string) => Promise<void>;
   readonly downloadRecording: (id: string) => Promise<void>;
   readonly playRecording: (id: string) => Promise<void>;
-}
+};
 
 export function useRecordingStorage(): RecordingStorageResult {
   const [recordings, setRecordings] = useState<readonly RecordingMeta[]>([]);
@@ -63,12 +63,12 @@ export function useRecordingStorage(): RecordingStorageResult {
 
   const cleanupExpired = useCallback(async () => {
     const now = Date.now();
-    const list = ((await get(LIST_KEY)) as string[] | undefined) ?? [];
+    const list = (await get<string[]>(LIST_KEY)) ?? [];
     const validIds: string[] = [];
     const expiredIds: string[] = [];
 
     for (const id of list) {
-      const recording = (await get(`recording-${id}`)) as Recording | undefined;
+      const recording = await get<Recording>(`recording-${id}`);
       if (recording && recording.expiresAt > now) {
         validIds.push(id);
       } else {
@@ -95,7 +95,7 @@ export function useRecordingStorage(): RecordingStorageResult {
       const metas: RecordingMeta[] = [];
 
       for (const id of validIds) {
-        const recording = (await get(`recording-${id}`)) as Recording | undefined;
+        const recording = await get<Recording>(`recording-${id}`);
         if (recording) {
           metas.push({
             id: recording.id,
@@ -118,37 +118,34 @@ export function useRecordingStorage(): RecordingStorageResult {
   const loadRecording = useCallback(
     async (id: string): Promise<Recording | null> => {
       try {
-        const recording = (await get(`recording-${id}`)) as Recording | undefined;
+        const recording = await get<Recording>(`recording-${id}`);
         return recording ?? null;
       } catch (error) {
         console.error("Failed to load recording:", error);
         return null;
       }
     },
-    []
+    [],
   );
 
-  const deleteRecording = useCallback(
-    async (id: string): Promise<void> => {
-      try {
-        await del(`recording-${id}`);
+  const deleteRecording = useCallback(async (id: string): Promise<void> => {
+    try {
+      await del(`recording-${id}`);
 
-        const list = ((await get(LIST_KEY)) as string[] | undefined) ?? [];
-        const newList = list.filter((item) => item !== id);
-        await set(LIST_KEY, newList);
+      const list = (await get<string[]>(LIST_KEY)) ?? [];
+      const newList = list.filter((item) => item !== id);
+      await set(LIST_KEY, newList);
 
-        // Update local state directly instead of refetching
-        setRecordings((current) => current.filter((r) => r.id !== id));
-      } catch (error) {
-        console.error("Failed to delete recording:", error);
-      }
-    },
-    []
-  );
+      // Update local state directly instead of refetching
+      setRecordings((current) => current.filter((r) => r.id !== id));
+    } catch (error) {
+      console.error("Failed to delete recording:", error);
+    }
+  }, []);
 
   const downloadRecording = useCallback(async (id: string): Promise<void> => {
     try {
-      const recording = (await get(`recording-${id}`)) as Recording | undefined;
+      const recording = await get<Recording>(`recording-${id}`);
       if (!recording) return;
 
       const blob = createWavBlob(recording.audioData, recording.sampleRate);
@@ -167,14 +164,14 @@ export function useRecordingStorage(): RecordingStorageResult {
 
   const playRecording = useCallback(async (id: string): Promise<void> => {
     try {
-      const recording = (await get(`recording-${id}`)) as Recording | undefined;
+      const recording = await get<Recording>(`recording-${id}`);
       if (!recording) return;
 
       const audioContext = new AudioContext();
       const buffer = audioContext.createBuffer(
         1,
         recording.audioData.length,
-        recording.sampleRate
+        recording.sampleRate,
       );
       buffer.getChannelData(0).set(recording.audioData);
 

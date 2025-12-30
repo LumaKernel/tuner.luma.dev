@@ -38,16 +38,16 @@ function saveSettings(settings: Settings): void {
   }
 }
 
-interface SettingsContextValue {
+type SettingsContextValue = {
   readonly state: Settings;
   readonly update: (updater: (draft: WritableDraft<Settings>) => void) => void;
-}
+};
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
 
-interface SettingsProviderProps {
+type SettingsProviderProps = {
   readonly children: ReactNode;
-}
+};
 
 export function SettingsProvider({ children }: SettingsProviderProps) {
   // Load settings lazily on first render
@@ -62,7 +62,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
         return next;
       });
     },
-    []
+    [],
   );
 
   const value: SettingsContextValue = { state, update };

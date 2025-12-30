@@ -6,17 +6,13 @@ import {
   frequencyToOctave,
 } from "@/lib/noteUtils";
 
-interface PitchInfoProps {
+type PitchInfoProps = {
   readonly pitch: PitchData;
   readonly notation: Notation;
   readonly accidental: Accidental;
-}
+};
 
-export function PitchInfo({
-  pitch,
-  notation,
-  accidental,
-}: PitchInfoProps) {
+export function PitchInfo({ pitch, notation, accidental }: PitchInfoProps) {
   const hasFrequency = pitch.frequency !== null;
   const frequency = pitch.frequency ?? 0;
   const cents = hasFrequency ? frequencyToCents(frequency) : 0;

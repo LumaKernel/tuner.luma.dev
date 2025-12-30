@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { MicrophoneSelector } from "./MicrophoneSelector";
 import type { AudioDevice } from "@/hooks/useMicrophoneDevices";
 
-interface StartOverlayProps {
+type StartOverlayProps = {
   readonly devices: readonly AudioDevice[];
   readonly selectedDeviceId: string;
   readonly onDeviceChange: (deviceId: string) => void;
@@ -16,7 +16,7 @@ interface StartOverlayProps {
   readonly onStart: () => void;
   readonly autoStart: boolean;
   readonly onAutoStartChange: (autoStart: boolean) => void;
-}
+};
 
 export function StartOverlay({
   devices,
@@ -77,9 +77,9 @@ export function StartOverlay({
               <Checkbox
                 id="auto-start"
                 checked={autoStart}
-                onCheckedChange={(checked) =>
-                  onAutoStartChange(checked === true)
-                }
+                onCheckedChange={(checked) => {
+                  onAutoStartChange(checked === true);
+                }}
               />
               <Label
                 htmlFor="auto-start"

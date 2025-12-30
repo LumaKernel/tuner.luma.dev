@@ -2,7 +2,7 @@
 
 declare module "*.wasm" {
   const initWasm: (
-    imports?: WebAssembly.Imports
+    imports?: WebAssembly.Imports,
   ) => Promise<WebAssembly.Instance>;
   export default initWasm;
 }

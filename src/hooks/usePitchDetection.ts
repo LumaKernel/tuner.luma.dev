@@ -103,20 +103,20 @@ function getRMS(buffer: Float32Array): number {
     return wasmModule.calculate_rms(buffer);
   }
   let sum = 0;
-  for (let i = 0; i < buffer.length; i++) {
-    sum += buffer[i] * buffer[i];
+  for (const value of buffer) {
+    sum += value * value;
   }
   return Math.sqrt(sum / buffer.length);
 }
 
-interface PitchDetectionResult {
+type PitchDetectionResult = {
   readonly currentPitch: PitchData;
   readonly pitchHistory: readonly PitchHistoryEntry[];
-}
+};
 
 export function usePitchDetection(
   audioData: Float32Array | null,
-  sampleRate: number
+  sampleRate: number,
 ): PitchDetectionResult {
   // Ref to accumulate history across renders
   const historyRef = useRef<PitchHistoryEntry[]>([]);
@@ -126,7 +126,11 @@ export function usePitchDetection(
   // This runs during render, which is fine for pure computation
   const now = Date.now();
 
-  if (audioData && audioData !== lastProcessedRef.current && audioData.length > 0) {
+  if (
+    audioData &&
+    audioData !== lastProcessedRef.current &&
+    audioData.length > 0
+  ) {
     lastProcessedRef.current = audioData;
 
     const rms = getRMS(audioData);
@@ -144,7 +148,7 @@ export function usePitchDetection(
   // Filter history during render (pure computation)
   const cutoff = now - HISTORY_DURATION_MS;
   const filteredHistory = historyRef.current.filter(
-    (entry) => entry.timestamp > cutoff
+    (entry) => entry.timestamp > cutoff,
   );
 
   // Update ref if filtering removed items (to prevent memory leak)

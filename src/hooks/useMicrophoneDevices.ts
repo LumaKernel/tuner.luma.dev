@@ -1,16 +1,16 @@
 import { useState, useCallback } from "react";
 
-export interface AudioDevice {
+export type AudioDevice = {
   readonly deviceId: string;
   readonly label: string;
-}
+};
 
-interface MicrophoneDevicesResult {
+type MicrophoneDevicesResult = {
   readonly devices: readonly AudioDevice[];
   readonly isLoading: boolean;
   readonly error: string | null;
   readonly refreshDevices: () => Promise<void>;
-}
+};
 
 export function useMicrophoneDevices(): MicrophoneDevicesResult {
   const [devices, setDevices] = useState<readonly AudioDevice[]>([]);
@@ -25,7 +25,9 @@ export function useMicrophoneDevices(): MicrophoneDevicesResult {
       // Request permission first - this is required to get device labels
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       // Stop the stream immediately - we just needed permission
-      stream.getTracks().forEach((track) => track.stop());
+      stream.getTracks().forEach((track) => {
+        track.stop();
+      });
 
       const allDevices = await navigator.mediaDevices.enumerateDevices();
       const audioInputs = allDevices

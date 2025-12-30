@@ -31,7 +31,7 @@ function TunerApp() {
 
   const { currentPitch, pitchHistory } = usePitchDetection(
     audioData,
-    sampleRate
+    sampleRate,
   );
 
   const volumeLevel = useVolumeLevel(stereoData);
@@ -39,7 +39,7 @@ function TunerApp() {
   const { saveRecording } = useRecordingBuffer(
     audioData,
     sampleRate,
-    settings.state.recordingDuration
+    settings.state.recordingDuration,
   );
 
   const { recordings, refresh, deleteRecording, downloadRecording } =
@@ -49,7 +49,11 @@ function TunerApp() {
   const initializedRef = useRef(false);
 
   // Select first device when devices are loaded
-  if (devices.length > 0 && selectedDeviceId === "" && !initializedRef.current) {
+  if (
+    devices.length > 0 &&
+    selectedDeviceId === "" &&
+    !initializedRef.current
+  ) {
     initializedRef.current = true;
     setSelectedDeviceId(devices[0].deviceId);
   }
@@ -59,23 +63,23 @@ function TunerApp() {
     (deviceId: string) => {
       setSelectedDeviceId(deviceId);
       if (isActive) {
-        startAudio(deviceId);
+        void startAudio(deviceId);
       }
     },
-    [isActive, startAudio]
+    [isActive, startAudio],
   );
 
   const handleSave = useCallback(() => {
-    saveRecording();
+    void saveRecording();
   }, [saveRecording]);
 
   const handleStart = useCallback(() => {
-    startAudio(selectedDeviceId || undefined);
+    void startAudio(selectedDeviceId || undefined);
   }, [startAudio, selectedDeviceId]);
 
   const handleOpenRecordings = useCallback(() => {
     setIsRecordingsOpen(true);
-    refresh();
+    void refresh();
   }, [refresh]);
 
   const handleAutoStartChange = useCallback(
@@ -84,7 +88,7 @@ function TunerApp() {
         draft.autoStart = autoStart;
       });
     },
-    [settings]
+    [settings],
   );
 
   // Track if we've attempted auto-start
@@ -94,7 +98,7 @@ function TunerApp() {
 
   // Load devices on mount
   useEffect(() => {
-    refreshDevices();
+    void refreshDevices();
   }, [refreshDevices]);
 
   // Auto-start only on initial page load (not when checkbox is changed)
@@ -107,7 +111,7 @@ function TunerApp() {
       !autoStartAttemptedRef.current
     ) {
       autoStartAttemptedRef.current = true;
-      startAudio(selectedDeviceId);
+      void startAudio(selectedDeviceId);
     }
   }, [devices.length, selectedDeviceId, isActive, startAudio]);
 
@@ -133,7 +137,9 @@ function TunerApp() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setIsSettingsOpen(true)}
+              onClick={() => {
+                setIsSettingsOpen(true);
+              }}
             >
               <Settings />
               設定
@@ -180,25 +186,29 @@ function TunerApp() {
           <ControlPanel
             onSave={handleSave}
             recordingDuration={settings.state.recordingDuration}
-            onDurationChange={(duration) =>
+            onDurationChange={(duration) => {
               settings.update((draft) => {
                 draft.recordingDuration = duration;
-              })
-            }
+              });
+            }}
           />
         )}
       </main>
 
       <SettingsDialog
         open={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
+        onClose={() => {
+          setIsSettingsOpen(false);
+        }}
         settings={settings.state}
         onSettingsChange={settings.update}
       />
 
       <RecordingList
         open={isRecordingsOpen}
-        onClose={() => setIsRecordingsOpen(false)}
+        onClose={() => {
+          setIsRecordingsOpen(false);
+        }}
         recordings={recordings}
         onDelete={deleteRecording}
         onDownload={downloadRecording}

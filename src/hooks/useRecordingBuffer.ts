@@ -8,14 +8,14 @@ function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
-interface RecordingBufferResult {
+type RecordingBufferResult = {
   readonly saveRecording: () => Promise<string | null>;
-}
+};
 
 export function useRecordingBuffer(
   audioData: Float32Array | null,
   sampleRate: number,
-  bufferDurationSeconds: number
+  bufferDurationSeconds: number,
 ): RecordingBufferResult {
   const audioBufferRef = useRef<Float32Array[]>([]);
   const pitchHistoryRef = useRef<PitchHistoryEntry[]>([]);
@@ -79,7 +79,7 @@ export function useRecordingBuffer(
 
       // Update recording list
       const listKey = "recording-list";
-      const existingList = (await get(listKey)) as string[] | undefined;
+      const existingList = await get<string[]>(listKey);
       const list = existingList ?? [];
       list.push(id);
       await set(listKey, list);

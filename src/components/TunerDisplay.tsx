@@ -13,20 +13,20 @@ const VIEW_HEIGHT = 480;
 const LABEL_WIDTH = 40;
 const RIGHT_MARGIN = 10;
 
-interface TunerDisplayProps {
+type TunerDisplayProps = {
   readonly pitchHistory: readonly PitchHistoryEntry[];
   readonly notation: Notation;
   readonly accidental: Accidental;
-}
+};
 
-interface GridLine {
+type GridLine = {
   readonly midi: number;
   readonly noteIndex: number;
   readonly octave: number;
   readonly y: number;
   readonly isC: boolean;
   readonly isNatural: boolean;
-}
+};
 
 function midiToY(midi: number): number {
   return VIEW_HEIGHT - ((midi - MIN_MIDI) / MIDI_RANGE) * VIEW_HEIGHT;
@@ -35,21 +35,25 @@ function midiToY(midi: number): number {
 function timestampToX(timestamp: number, now: number): number {
   const age = now - timestamp;
   const progress = age / DISPLAY_DURATION_MS;
-  return VIEW_WIDTH - RIGHT_MARGIN - progress * (VIEW_WIDTH - LABEL_WIDTH - RIGHT_MARGIN);
+  return (
+    VIEW_WIDTH -
+    RIGHT_MARGIN -
+    progress * (VIEW_WIDTH - LABEL_WIDTH - RIGHT_MARGIN)
+  );
 }
 
 // Gap threshold: if time between consecutive points exceeds this, start a new segment
 const GAP_THRESHOLD_MS = 200;
 
-interface PathPoint {
+type PathPoint = {
   readonly x: number;
   readonly y: number;
   readonly timestamp: number;
-}
+};
 
 function buildPitchPath(
   entries: readonly PitchHistoryEntry[],
-  now: number
+  now: number,
 ): string {
   const points: readonly PathPoint[] = entries
     .filter((entry) => {

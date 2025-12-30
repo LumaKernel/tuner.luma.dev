@@ -9,11 +9,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-interface ControlPanelProps {
+type ControlPanelProps = {
   readonly onSave: () => void;
   readonly recordingDuration: number;
   readonly onDurationChange: (duration: number) => void;
-}
+};
 
 type DurationOption = "30" | "60" | "120" | "custom";
 
@@ -42,13 +42,13 @@ export function ControlPanel({
   onDurationChange,
 }: ControlPanelProps) {
   const [option, setOption] = useState<DurationOption>(() =>
-    getDurationOption(recordingDuration)
+    getDurationOption(recordingDuration),
   );
   const [customMinutes, setCustomMinutes] = useState(() =>
-    Math.floor(recordingDuration / 60)
+    Math.floor(recordingDuration / 60),
   );
   const [customSeconds, setCustomSeconds] = useState(
-    () => recordingDuration % 60
+    () => recordingDuration % 60,
   );
 
   // Sync option when recordingDuration changes externally
@@ -114,7 +114,9 @@ export function ControlPanel({
               min="0"
               max="59"
               value={customMinutes}
-              onChange={(e) => handleCustomMinutesChange(e.target.value)}
+              onChange={(e) => {
+                handleCustomMinutesChange(e.target.value);
+              }}
               className="w-12 h-9 px-2 text-sm text-center rounded-md border border-input bg-transparent shadow-xs focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring"
             />
             <span className="text-sm text-muted-foreground">分</span>
@@ -123,7 +125,9 @@ export function ControlPanel({
               min="0"
               max="59"
               value={customSeconds}
-              onChange={(e) => handleCustomSecondsChange(e.target.value)}
+              onChange={(e) => {
+                handleCustomSecondsChange(e.target.value);
+              }}
               className="w-12 h-9 px-2 text-sm text-center rounded-md border border-input bg-transparent shadow-xs focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring"
             />
             <span className="text-sm text-muted-foreground">秒</span>

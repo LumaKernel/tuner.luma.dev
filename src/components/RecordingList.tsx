@@ -9,13 +9,13 @@ import {
 import { Button } from "@/components/ui/button";
 import type { RecordingMeta } from "@/types";
 
-interface RecordingListProps {
+type RecordingListProps = {
   readonly open: boolean;
   readonly onClose: () => void;
   readonly recordings: readonly RecordingMeta[];
   readonly onDelete: (id: string) => void;
   readonly onDownload: (id: string) => void;
-}
+};
 
 function formatDate(timestamp: number): string {
   return new Date(timestamp).toLocaleString("ja-JP", {
@@ -40,7 +40,7 @@ function formatTimeRemaining(expiresAt: number): string {
 
   const days = Math.floor(remaining / (24 * 60 * 60 * 1000));
   const hours = Math.floor(
-    (remaining % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000)
+    (remaining % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000),
   );
 
   if (days > 0) return `あと${days}日`;
@@ -93,14 +93,18 @@ export function RecordingList({
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={() => onDownload(recording.id)}
+                      onClick={() => {
+                        onDownload(recording.id);
+                      }}
                     >
                       <Download className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={() => onDelete(recording.id)}
+                      onClick={() => {
+                        onDelete(recording.id);
+                      }}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

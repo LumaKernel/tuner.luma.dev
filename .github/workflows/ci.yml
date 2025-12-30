@@ -32,6 +32,24 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
   rust-lint:
     name: Rust Lint
     runs-on: ubuntu-latest
@@ -80,7 +98,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [typecheck, rust-lint]
+    needs: [typecheck, lint, rust-lint]
     steps:
       - uses: actions/checkout@v4
 

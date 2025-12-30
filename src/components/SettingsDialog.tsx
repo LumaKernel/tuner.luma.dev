@@ -11,14 +11,14 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import type { Settings, Notation, Accidental } from "@/types";
 
-interface SettingsDialogProps {
+type SettingsDialogProps = {
   readonly open: boolean;
   readonly onClose: () => void;
   readonly settings: Settings;
   readonly onSettingsChange: (
-    updater: (draft: WritableDraft<Settings>) => void
+    updater: (draft: WritableDraft<Settings>) => void,
   ) => void;
-}
+};
 
 export function SettingsDialog({
   open,
@@ -32,7 +32,7 @@ export function SettingsDialog({
         draft.notation = notation;
       });
     },
-    [onSettingsChange]
+    [onSettingsChange],
   );
 
   const handleAccidentalChange = useCallback(
@@ -41,7 +41,7 @@ export function SettingsDialog({
         draft.accidental = accidental;
       });
     },
-    [onSettingsChange]
+    [onSettingsChange],
   );
 
   const handleAutoStartChange = useCallback(
@@ -50,7 +50,7 @@ export function SettingsDialog({
         draft.autoStart = autoStart;
       });
     },
-    [onSettingsChange]
+    [onSettingsChange],
   );
 
   return (
@@ -66,7 +66,9 @@ export function SettingsDialog({
             <Label>表記法</Label>
             <RadioGroup
               value={settings.notation}
-              onValueChange={(value) => handleNotationChange(value as Notation)}
+              onValueChange={(value) => {
+                handleNotationChange(value as Notation);
+              }}
               className="flex gap-4"
             >
               <div className="flex items-center space-x-2">
@@ -89,9 +91,9 @@ export function SettingsDialog({
             <Label>変化記号</Label>
             <RadioGroup
               value={settings.accidental}
-              onValueChange={(value) =>
-                handleAccidentalChange(value as Accidental)
-              }
+              onValueChange={(value) => {
+                handleAccidentalChange(value as Accidental);
+              }}
               className="flex gap-4"
             >
               <div className="flex items-center space-x-2">

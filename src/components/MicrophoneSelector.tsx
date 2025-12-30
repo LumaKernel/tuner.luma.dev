@@ -9,13 +9,13 @@ import {
 import { Label } from "@/components/ui/label";
 import type { AudioDevice } from "@/hooks/useMicrophoneDevices";
 
-interface MicrophoneSelectorProps {
+type MicrophoneSelectorProps = {
   readonly devices: readonly AudioDevice[];
   readonly selectedDeviceId: string;
   readonly onDeviceChange: (deviceId: string) => void;
   readonly isLoading: boolean;
   readonly compact?: boolean;
-}
+};
 
 export function MicrophoneSelector({
   devices,

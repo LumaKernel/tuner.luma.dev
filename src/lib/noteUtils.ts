@@ -89,7 +89,7 @@ export function frequencyToOctave(frequency: number): number {
 
 export function getNoteNames(
   notation: Notation,
-  accidental: Accidental
+  accidental: Accidental,
 ): readonly string[] {
   if (notation === "letter") {
     return accidental === "sharp" ? LETTER_NOTES_SHARP : LETTER_NOTES_FLAT;
@@ -100,7 +100,7 @@ export function getNoteNames(
 export function frequencyToNoteName(
   frequency: number,
   notation: Notation,
-  accidental: Accidental
+  accidental: Accidental,
 ): string {
   const noteIndex = frequencyToNoteIndex(frequency);
   const notes = getNoteNames(notation, accidental);
@@ -112,7 +112,7 @@ export function frequencyToNoteName(
 export function getNoteNameWithoutOctave(
   frequency: number,
   notation: Notation,
-  accidental: Accidental
+  accidental: Accidental,
 ): string {
   const noteIndex = frequencyToNoteIndex(frequency);
   const notes = getNoteNames(notation, accidental);
