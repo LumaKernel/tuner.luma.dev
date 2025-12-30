@@ -36,7 +36,11 @@ function TunerApp() {
 
   const volumeLevel = useVolumeLevel(stereoData);
 
-  const { saveRecording } = useRecordingBuffer(audioData, sampleRate);
+  const { saveRecording } = useRecordingBuffer(
+    audioData,
+    sampleRate,
+    settings.state.recordingDuration
+  );
 
   const { recordings, refresh, deleteRecording, downloadRecording } =
     useRecordingStorage();
@@ -144,7 +148,17 @@ function TunerApp() {
           )}
         </div>
 
-        {isActive && <ControlPanel onSave={handleSave} />}
+        {isActive && (
+          <ControlPanel
+            onSave={handleSave}
+            recordingDuration={settings.state.recordingDuration}
+            onDurationChange={(duration) =>
+              settings.update((draft) => {
+                draft.recordingDuration = duration;
+              })
+            }
+          />
+        )}
       </main>
 
       <SettingsDialog

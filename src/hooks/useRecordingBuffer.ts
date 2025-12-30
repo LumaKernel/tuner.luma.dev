@@ -2,7 +2,6 @@ import { useRef, useCallback } from "react";
 import { get, set } from "idb-keyval";
 import type { Recording, PitchHistoryEntry } from "@/types";
 
-const BUFFER_DURATION_SECONDS = 30;
 const EXPIRATION_DAYS = 7;
 
 function generateId(): string {
@@ -15,13 +14,14 @@ interface RecordingBufferResult {
 
 export function useRecordingBuffer(
   audioData: Float32Array | null,
-  sampleRate: number
+  sampleRate: number,
+  bufferDurationSeconds: number
 ): RecordingBufferResult {
   const audioBufferRef = useRef<Float32Array[]>([]);
   const pitchHistoryRef = useRef<PitchHistoryEntry[]>([]);
   const lastProcessedRef = useRef<Float32Array | null>(null);
 
-  const maxSamples = sampleRate * BUFFER_DURATION_SECONDS;
+  const maxSamples = sampleRate * bufferDurationSeconds;
 
   // Accumulate audio data during render (if new data)
   if (audioData && audioData !== lastProcessedRef.current) {

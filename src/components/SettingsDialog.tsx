@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import type { WritableDraft } from "immer";
 import {
   Dialog,
   DialogContent,
@@ -16,7 +17,9 @@ interface SettingsDialogProps {
   readonly open: boolean;
   readonly onClose: () => void;
   readonly settings: Settings;
-  readonly onSettingsChange: (updater: (draft: Settings) => void) => void;
+  readonly onSettingsChange: (
+    updater: (draft: WritableDraft<Settings>) => void
+  ) => void;
 }
 
 export function SettingsDialog({

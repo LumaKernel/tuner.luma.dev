@@ -14,10 +14,11 @@ export interface PitchHistoryEntry {
 }
 
 export interface Settings {
-  notation: Notation;
-  accidental: Accidental;
-  movableDo: boolean;
-  baseNote: number; // 0-11 (C=0, C#=1, ..., B=11)
+  readonly notation: Notation;
+  readonly accidental: Accidental;
+  readonly movableDo: boolean;
+  readonly baseNote: number; // 0-11 (C=0, C#=1, ..., B=11)
+  readonly recordingDuration: number; // seconds (30, 60, 120, or custom)
 }
 
 export interface Recording {

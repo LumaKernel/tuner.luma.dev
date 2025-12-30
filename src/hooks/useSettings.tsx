@@ -5,7 +5,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import { produce } from "immer";
+import { produce, type WritableDraft } from "immer";
 import type { Settings } from "@/types";
 
 const STORAGE_KEY = "tuner-settings";
@@ -15,6 +15,7 @@ const defaultSettings: Settings = {
   accidental: "sharp",
   movableDo: false,
   baseNote: 0,
+  recordingDuration: 30,
 };
 
 function loadSettings(): Settings {
@@ -40,7 +41,7 @@ function saveSettings(settings: Settings): void {
 
 interface SettingsContextValue {
   readonly state: Settings;
-  readonly update: (updater: (draft: Settings) => void) => void;
+  readonly update: (updater: (draft: WritableDraft<Settings>) => void) => void;
 }
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
@@ -53,14 +54,17 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
   // Load settings lazily on first render
   const [state, setState] = useState<Settings>(loadSettings);
 
-  const update = useCallback((updater: (draft: Settings) => void) => {
-    setState((current) => {
-      const next = produce(current, updater);
-      // Save immediately when updating - no need for useEffect
-      saveSettings(next);
-      return next;
-    });
-  }, []);
+  const update = useCallback(
+    (updater: (draft: WritableDraft<Settings>) => void) => {
+      setState((current) => {
+        const next = produce(current, updater);
+        // Save immediately when updating - no need for useEffect
+        saveSettings(next);
+        return next;
+      });
+    },
+    []
+  );
 
   const value: SettingsContextValue = { state, update };
 
