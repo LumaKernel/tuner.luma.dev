@@ -1,2 +1,2 @@
-サイト名(タイトル、ロゴなど)は tuner.luma.dev で統一して。
+サイト名(タイトル、ブランドなど)は tuner.luma.dev で統一して。
 ultrathink

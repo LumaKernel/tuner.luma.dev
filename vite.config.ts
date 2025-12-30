@@ -16,8 +16,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["tuner.svg"],
       manifest: {
-        name: "Tuner - Pitch Detection & Recording",
-        short_name: "Tuner",
+        name: "tuner.luma.dev",
+        short_name: "tuner.luma.dev",
         description: "Web-based pitch tuner with recording capability",
         lang: "ja",
         theme_color: "#0a0a0a",
