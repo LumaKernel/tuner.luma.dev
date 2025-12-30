@@ -7,9 +7,11 @@ import { SettingsDialog } from "./components/SettingsDialog";
 import { RecordingList } from "./components/RecordingList";
 import { StartOverlay } from "./components/StartOverlay";
 import { MicrophoneSelector } from "./components/MicrophoneSelector";
+import { VolumeLevel } from "./components/VolumeLevel";
 import { Button } from "./components/ui/button";
 import { useAudioInput } from "./hooks/useAudioInput";
 import { usePitchDetection } from "./hooks/usePitchDetection";
+import { useVolumeLevel } from "./hooks/useVolumeLevel";
 import { useRecordingBuffer } from "./hooks/useRecordingBuffer";
 import { useRecordingStorage } from "./hooks/useRecordingStorage";
 import { useMicrophoneDevices } from "./hooks/useMicrophoneDevices";
@@ -22,12 +24,15 @@ function TunerApp() {
   const settings = useSettings();
 
   const { devices, isLoading, error, refreshDevices } = useMicrophoneDevices();
-  const { isActive, startAudio, audioData, sampleRate } = useAudioInput();
+  const { isActive, startAudio, audioData, stereoData, sampleRate } =
+    useAudioInput();
 
   const { currentPitch, pitchHistory } = usePitchDetection(
     audioData,
     sampleRate
   );
+
+  const volumeLevel = useVolumeLevel(stereoData);
 
   const { saveRecording } = useRecordingBuffer(audioData, sampleRate);
 
@@ -105,13 +110,16 @@ function TunerApp() {
 
       <main className="flex-1 flex flex-col p-4 gap-4 max-w-4xl mx-auto w-full">
         {isActive && (
-          <PitchInfo
-            pitch={currentPitch}
-            notation={settings.state.notation}
-            accidental={settings.state.accidental}
-            movableDo={settings.state.movableDo}
-            baseNote={settings.state.baseNote}
-          />
+          <>
+            <PitchInfo
+              pitch={currentPitch}
+              notation={settings.state.notation}
+              accidental={settings.state.accidental}
+              movableDo={settings.state.movableDo}
+              baseNote={settings.state.baseNote}
+            />
+            <VolumeLevel volume={volumeLevel} />
+          </>
         )}
 
         <div className="relative flex-1 min-h-[300px] md:min-h-[400px]">
