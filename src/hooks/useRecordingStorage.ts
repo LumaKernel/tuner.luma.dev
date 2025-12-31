@@ -150,19 +150,27 @@ export function useRecordingStorage(): RecordingStorageResult {
     [],
   );
 
-  const deleteRecording = useCallback(async (id: string): Promise<void> => {
-    try {
-      await del(`recording-${id}`);
+  const deleteRecording = useCallback(
+    async (id: string): Promise<void> => {
+      try {
+        // Stop playback if deleting the currently playing recording
+        if (playingId === id) {
+          cleanupPlayback();
+        }
 
-      const list = (await get<string[]>(LIST_KEY)) ?? [];
-      const newList = list.filter((item) => item !== id);
-      await set(LIST_KEY, newList);
+        await del(`recording-${id}`);
 
-      setRecordings((current) => current.filter((r) => r.id !== id));
-    } catch (error) {
-      console.error("Failed to delete recording:", error);
-    }
-  }, []);
+        const list = (await get<string[]>(LIST_KEY)) ?? [];
+        const newList = list.filter((item) => item !== id);
+        await set(LIST_KEY, newList);
+
+        setRecordings((current) => current.filter((r) => r.id !== id));
+      } catch (error) {
+        console.error("Failed to delete recording:", error);
+      }
+    },
+    [playingId, cleanupPlayback],
+  );
 
   const downloadRecording = useCallback(
     async (id: string, format: AudioFormat = "auto"): Promise<void> => {
