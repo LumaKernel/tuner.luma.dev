@@ -96,7 +96,7 @@ function TunerApp() {
     try {
       const id = await saveRecording();
       if (id) {
-        toast.success("録音を保存しました");
+        toast.success("録音を保存しました。録音一覧から確認してください。");
       } else {
         toast.error("保存するデータがありません");
       }
