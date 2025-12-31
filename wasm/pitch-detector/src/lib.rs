@@ -1,8 +1,5 @@
 use wasm_bindgen::prelude::*;
 
-#[cfg(feature = "console_error_panic_hook")]
-use console_error_panic_hook;
-
 const MIN_FREQUENCY: f32 = 60.0;
 const MAX_FREQUENCY: f32 = 2000.0;
 const DEFAULT_THRESHOLD: f32 = 0.1;
@@ -99,7 +96,7 @@ pub fn detect_pitch_with_threshold(samples: &[f32], sample_rate: f32, threshold:
     let frequency = sample_rate / better_tau;
 
     // Validate frequency range
-    if frequency < MIN_FREQUENCY || frequency > MAX_FREQUENCY {
+    if !(MIN_FREQUENCY..=MAX_FREQUENCY).contains(&frequency) {
         return -1.0;
     }
 
@@ -133,8 +130,8 @@ pub fn get_pitch_clarity(samples: &[f32], sample_rate: f32) -> f32 {
     let mut zero_lag_correlation = 0.0f32;
 
     // Zero-lag correlation (normalization factor)
-    for i in 0..half_buffer_size {
-        zero_lag_correlation += samples[i] * samples[i];
+    for sample in samples.iter().take(half_buffer_size) {
+        zero_lag_correlation += sample * sample;
     }
 
     if zero_lag_correlation < f32::EPSILON {
