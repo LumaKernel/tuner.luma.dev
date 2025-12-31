@@ -50,6 +50,7 @@ function TunerApp() {
     playRecording,
     stopPlayback,
     playingId,
+    isConverting,
   } = useRecordingStorage();
 
   // Track if we've initialized device selection
@@ -222,6 +223,7 @@ function TunerApp() {
         onPlay={playRecording}
         onStop={stopPlayback}
         playingId={playingId}
+        isConverting={isConverting}
       />
     </div>
   );

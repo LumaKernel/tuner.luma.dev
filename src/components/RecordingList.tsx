@@ -1,4 +1,4 @@
-import { Download, Trash2, Play, Square } from "lucide-react";
+import { Download, Trash2, Play, Square, ChevronDown, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -7,17 +7,28 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { RecordingMeta } from "@/types";
+import {
+  type DownloadFormat,
+  DOWNLOAD_FORMAT_LABELS,
+} from "@/utils/audioConverter";
 
 type RecordingListProps = {
   readonly open: boolean;
   readonly onClose: () => void;
   readonly recordings: readonly RecordingMeta[];
   readonly onDelete: (id: string) => void;
-  readonly onDownload: (id: string) => void;
+  readonly onDownload: (id: string, format: DownloadFormat) => void;
   readonly onPlay: (id: string) => void;
   readonly onStop: () => void;
   readonly playingId: string | null;
+  readonly isConverting: boolean;
 };
 
 function formatDate(timestamp: number): string {
@@ -51,6 +62,8 @@ function formatTimeRemaining(expiresAt: number): string {
   return "まもなく期限切れ";
 }
 
+const DOWNLOAD_FORMATS: readonly DownloadFormat[] = ["original", "wav", "mp3"];
+
 export function RecordingList({
   open,
   onClose,
@@ -60,6 +73,7 @@ export function RecordingList({
   onPlay,
   onStop,
   playingId,
+  isConverting,
 }: RecordingListProps) {
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -111,15 +125,36 @@ export function RecordingList({
                         <Play className="h-4 w-4" />
                       </Button>
                     )}
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => {
-                        onDownload(recording.id);
-                      }}
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled={isConverting}
+                        >
+                          {isConverting ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <>
+                              <Download className="h-4 w-4" />
+                              <ChevronDown className="h-3 w-3 ml-1" />
+                            </>
+                          )}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {DOWNLOAD_FORMATS.map((format) => (
+                          <DropdownMenuItem
+                            key={format}
+                            onClick={() => {
+                              onDownload(recording.id, format);
+                            }}
+                          >
+                            {DOWNLOAD_FORMAT_LABELS[format]}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                     <Button
                       variant="destructive"
                       size="sm"

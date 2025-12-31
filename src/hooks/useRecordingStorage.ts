@@ -1,25 +1,21 @@
 import { useState, useCallback, useRef } from "react";
 import { get, set, del } from "idb-keyval";
 import type { Recording, RecordingMeta } from "@/types";
+import {
+  convertAudioBlob,
+  type DownloadFormat,
+} from "@/utils/audioConverter";
 
 const LIST_KEY = "recording-list";
-
-// Get file extension from MIME type
-function getExtensionFromMimeType(mimeType: string): string {
-  if (mimeType.includes("webm")) return "webm";
-  if (mimeType.includes("ogg")) return "ogg";
-  if (mimeType.includes("mp4")) return "m4a";
-  if (mimeType.includes("wav")) return "wav";
-  return "audio";
-}
 
 type RecordingStorageResult = {
   readonly recordings: readonly RecordingMeta[];
   readonly isLoading: boolean;
+  readonly isConverting: boolean;
   readonly refresh: () => Promise<void>;
   readonly loadRecording: (id: string) => Promise<Recording | null>;
   readonly deleteRecording: (id: string) => Promise<void>;
-  readonly downloadRecording: (id: string) => Promise<void>;
+  readonly downloadRecording: (id: string, format?: DownloadFormat) => Promise<void>;
   readonly playRecording: (id: string) => Promise<void>;
   readonly stopPlayback: () => void;
   readonly playingId: string | null;
@@ -28,6 +24,7 @@ type RecordingStorageResult = {
 export function useRecordingStorage(): RecordingStorageResult {
   const [recordings, setRecordings] = useState<readonly RecordingMeta[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isConverting, setIsConverting] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const objectUrlRef = useRef<string | null>(null);
@@ -124,24 +121,35 @@ export function useRecordingStorage(): RecordingStorageResult {
     }
   }, []);
 
-  const downloadRecording = useCallback(async (id: string): Promise<void> => {
-    try {
-      const recording = await get<Recording>(`recording-${id}`);
-      if (!recording) return;
+  const downloadRecording = useCallback(
+    async (id: string, format: DownloadFormat = "original"): Promise<void> => {
+      try {
+        const recording = await get<Recording>(`recording-${id}`);
+        if (!recording) return;
 
-      const url = URL.createObjectURL(recording.audioBlob);
-      const a = document.createElement("a");
-      a.href = url;
-      const ext = getExtensionFromMimeType(recording.mimeType);
-      a.download = `recording-${new Date(recording.createdAt).toISOString().slice(0, 19).replace(/:/g, "-")}.${ext}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Failed to download recording:", error);
-    }
-  }, []);
+        setIsConverting(true);
+
+        const { blob, extension } = await convertAudioBlob(
+          recording.audioBlob,
+          format,
+        );
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `recording-${new Date(recording.createdAt).toISOString().slice(0, 19).replace(/:/g, "-")}.${extension}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error("Failed to download recording:", error);
+      } finally {
+        setIsConverting(false);
+      }
+    },
+    [],
+  );
 
   const playRecording = useCallback(
     async (id: string): Promise<void> => {
@@ -184,6 +192,7 @@ export function useRecordingStorage(): RecordingStorageResult {
   return {
     recordings,
     isLoading,
+    isConverting,
     refresh,
     loadRecording,
     deleteRecording,

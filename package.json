@@ -25,6 +25,7 @@
     "clsx": "^2.1.1",
     "idb-keyval": "^6.2.2",
     "immer": "^10.2.0",
+    "lamejs": "^1.2.1",
     "lucide-react": "^0.562.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
