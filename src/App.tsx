@@ -39,7 +39,7 @@ function TunerApp() {
   const { saveRecording } = useRecordingBuffer(
     stream,
     settings.state.recordingDuration,
-    settings.state.audioCodec,
+    settings.state.audioFormat,
   );
 
   const {
@@ -224,6 +224,7 @@ function TunerApp() {
         onStop={stopPlayback}
         playingId={playingId}
         isConverting={isConverting}
+        defaultFormat={settings.state.audioFormat}
       />
     </div>
   );

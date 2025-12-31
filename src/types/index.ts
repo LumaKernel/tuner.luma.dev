@@ -1,20 +1,43 @@
 export type Notation = "letter" | "solfege";
 export type Accidental = "sharp" | "flat";
 
-// Audio codec options for recording
-export type AudioCodec =
-  | "audio/webm;codecs=opus"
-  | "audio/webm"
-  | "audio/ogg;codecs=opus"
-  | "audio/mp4"
-  | "auto";
+// Unified audio format for both recording and download
+export type AudioFormat =
+  | "auto" // Browser's best supported format
+  | "webm-opus" // audio/webm;codecs=opus
+  | "webm" // audio/webm
+  | "ogg-opus" // audio/ogg;codecs=opus
+  | "mp4" // audio/mp4
+  | "wav" // Converted from recording
+  | "mp3"; // Converted from recording
 
-export const AUDIO_CODEC_LABELS: Record<AudioCodec, string> = {
-  auto: "自動（推奨）",
-  "audio/webm;codecs=opus": "WebM (Opus)",
-  "audio/webm": "WebM",
-  "audio/ogg;codecs=opus": "Ogg (Opus)",
-  "audio/mp4": "MP4 (AAC)",
+export const AUDIO_FORMAT_LABELS: Record<AudioFormat, string> = {
+  auto: "自動（ブラウザ推奨形式）",
+  "webm-opus": "WebM (Opus)",
+  webm: "WebM",
+  "ogg-opus": "Ogg (Opus)",
+  mp4: "MP4 (AAC)",
+  wav: "WAV（無圧縮）",
+  mp3: "MP3",
+};
+
+// Map AudioFormat to MIME type (for MediaRecorder)
+export const AUDIO_FORMAT_MIME_TYPES: Partial<Record<AudioFormat, string>> = {
+  "webm-opus": "audio/webm;codecs=opus",
+  webm: "audio/webm",
+  "ogg-opus": "audio/ogg;codecs=opus",
+  mp4: "audio/mp4",
+};
+
+// File extensions for each format
+export const AUDIO_FORMAT_EXTENSIONS: Record<AudioFormat, string> = {
+  auto: "webm",
+  "webm-opus": "webm",
+  webm: "webm",
+  "ogg-opus": "ogg",
+  mp4: "m4a",
+  wav: "wav",
+  mp3: "mp3",
 };
 
 export type PitchData = {
@@ -34,7 +57,7 @@ export type Settings = {
   readonly accidental: Accidental;
   readonly recordingDuration: number; // seconds (30, 60, 120, or custom)
   readonly autoStart: boolean; // 次回から自動で開始する
-  readonly audioCodec: AudioCodec; // 録音コーデック
+  readonly audioFormat: AudioFormat; // 保存・ダウンロード形式
 };
 
 export type Recording = {

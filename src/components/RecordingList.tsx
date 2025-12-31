@@ -1,4 +1,12 @@
-import { Download, Trash2, Play, Square, ChevronDown, Loader2 } from "lucide-react";
+import { useMemo } from "react";
+import {
+  Download,
+  Trash2,
+  Play,
+  Square,
+  ChevronDown,
+  Loader2,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,22 +21,24 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { RecordingMeta } from "@/types";
 import {
-  type DownloadFormat,
-  DOWNLOAD_FORMAT_LABELS,
-} from "@/utils/audioConverter";
+  type RecordingMeta,
+  type AudioFormat,
+  AUDIO_FORMAT_LABELS,
+} from "@/types";
+import { getSupportedFormats } from "@/utils/audioConverter";
 
 type RecordingListProps = {
   readonly open: boolean;
   readonly onClose: () => void;
   readonly recordings: readonly RecordingMeta[];
   readonly onDelete: (id: string) => void;
-  readonly onDownload: (id: string, format: DownloadFormat) => void;
+  readonly onDownload: (id: string, format: AudioFormat) => void;
   readonly onPlay: (id: string) => void;
   readonly onStop: () => void;
   readonly playingId: string | null;
   readonly isConverting: boolean;
+  readonly defaultFormat: AudioFormat;
 };
 
 function formatDate(timestamp: number): string {
@@ -62,8 +72,6 @@ function formatTimeRemaining(expiresAt: number): string {
   return "まもなく期限切れ";
 }
 
-const DOWNLOAD_FORMATS: readonly DownloadFormat[] = ["original", "wav", "mp3"];
-
 export function RecordingList({
   open,
   onClose,
@@ -74,7 +82,10 @@ export function RecordingList({
   onStop,
   playingId,
   isConverting,
+  defaultFormat,
 }: RecordingListProps) {
+  const supportedFormats = useMemo(() => getSupportedFormats(), []);
+
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="sm:max-w-lg max-h-[80vh] flex flex-col">
@@ -143,14 +154,19 @@ export function RecordingList({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        {DOWNLOAD_FORMATS.map((format) => (
+                        {supportedFormats.map((format) => (
                           <DropdownMenuItem
                             key={format}
                             onClick={() => {
                               onDownload(recording.id, format);
                             }}
                           >
-                            {DOWNLOAD_FORMAT_LABELS[format]}
+                            {AUDIO_FORMAT_LABELS[format]}
+                            {format === defaultFormat && (
+                              <span className="ml-2 text-xs text-muted-foreground">
+                                (デフォルト)
+                              </span>
+                            )}
                           </DropdownMenuItem>
                         ))}
                       </DropdownMenuContent>

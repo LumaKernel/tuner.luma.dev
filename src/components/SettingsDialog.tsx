@@ -16,13 +16,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { getSupportedCodecs } from "@/hooks/useRecordingBuffer";
+import { getSupportedFormats } from "@/utils/audioConverter";
 import {
   type Settings,
   type Notation,
   type Accidental,
-  type AudioCodec,
-  AUDIO_CODEC_LABELS,
+  type AudioFormat,
+  AUDIO_FORMAT_LABELS,
 } from "@/types";
 
 type SettingsDialogProps = {
@@ -67,16 +67,16 @@ export function SettingsDialog({
     [onSettingsChange],
   );
 
-  const handleAudioCodecChange = useCallback(
-    (audioCodec: AudioCodec) => {
+  const handleAudioFormatChange = useCallback(
+    (audioFormat: AudioFormat) => {
       onSettingsChange((draft) => {
-        draft.audioCodec = audioCodec;
+        draft.audioFormat = audioFormat;
       });
     },
     [onSettingsChange],
   );
 
-  const supportedCodecs = useMemo(() => getSupportedCodecs(), []);
+  const supportedFormats = useMemo(() => getSupportedFormats(), []);
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -146,28 +146,28 @@ export function SettingsDialog({
             />
           </div>
 
-          {/* Audio Codec */}
+          {/* Audio Format */}
           <div className="space-y-3">
-            <Label>録音フォーマット</Label>
+            <Label>保存フォーマット</Label>
             <Select
-              value={settings.audioCodec}
+              value={settings.audioFormat}
               onValueChange={(value) => {
-                handleAudioCodecChange(value as AudioCodec);
+                handleAudioFormatChange(value as AudioFormat);
               }}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {supportedCodecs.map((codec) => (
-                  <SelectItem key={codec} value={codec}>
-                    {AUDIO_CODEC_LABELS[codec]}
+                {supportedFormats.map((format) => (
+                  <SelectItem key={format} value={format}>
+                    {AUDIO_FORMAT_LABELS[format]}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              ダウンロード時のファイル形式を指定します
+              ダウンロード時のデフォルト形式を指定します
             </p>
           </div>
         </div>

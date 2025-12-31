@@ -1,10 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import { get, set, del } from "idb-keyval";
-import type { Recording, RecordingMeta } from "@/types";
-import {
-  convertAudioBlob,
-  type DownloadFormat,
-} from "@/utils/audioConverter";
+import type { Recording, RecordingMeta, AudioFormat } from "@/types";
+import { convertAudioBlob } from "@/utils/audioConverter";
 
 const LIST_KEY = "recording-list";
 
@@ -15,7 +12,10 @@ type RecordingStorageResult = {
   readonly refresh: () => Promise<void>;
   readonly loadRecording: (id: string) => Promise<Recording | null>;
   readonly deleteRecording: (id: string) => Promise<void>;
-  readonly downloadRecording: (id: string, format?: DownloadFormat) => Promise<void>;
+  readonly downloadRecording: (
+    id: string,
+    format?: AudioFormat,
+  ) => Promise<void>;
   readonly playRecording: (id: string) => Promise<void>;
   readonly stopPlayback: () => void;
   readonly playingId: string | null;
@@ -122,7 +122,7 @@ export function useRecordingStorage(): RecordingStorageResult {
   }, []);
 
   const downloadRecording = useCallback(
-    async (id: string, format: DownloadFormat = "original"): Promise<void> => {
+    async (id: string, format: AudioFormat = "auto"): Promise<void> => {
       try {
         const recording = await get<Recording>(`recording-${id}`);
         if (!recording) return;
