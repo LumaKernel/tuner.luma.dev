@@ -18,7 +18,10 @@ type RecordingStorageResult = {
   ) => Promise<void>;
   readonly playRecording: (id: string) => Promise<void>;
   readonly stopPlayback: () => void;
+  readonly seek: (time: number) => void;
   readonly playingId: string | null;
+  readonly playbackTime: number;
+  readonly playbackDuration: number;
 };
 
 export function useRecordingStorage(): RecordingStorageResult {
@@ -26,6 +29,8 @@ export function useRecordingStorage(): RecordingStorageResult {
   const [isLoading, setIsLoading] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [playbackTime, setPlaybackTime] = useState(0);
+  const [playbackDuration, setPlaybackDuration] = useState(0);
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const objectUrlRef = useRef<string | null>(null);
 
@@ -39,6 +44,8 @@ export function useRecordingStorage(): RecordingStorageResult {
       objectUrlRef.current = null;
     }
     setPlayingId(null);
+    setPlaybackTime(0);
+    setPlaybackDuration(0);
   }, []);
 
   const cleanupExpired = useCallback(async () => {
@@ -167,6 +174,14 @@ export function useRecordingStorage(): RecordingStorageResult {
         audioElementRef.current = audio;
         setPlayingId(id);
 
+        audio.onloadedmetadata = () => {
+          setPlaybackDuration(audio.duration);
+        };
+
+        audio.ontimeupdate = () => {
+          setPlaybackTime(audio.currentTime);
+        };
+
         audio.onended = () => {
           cleanupPlayback();
         };
@@ -189,6 +204,13 @@ export function useRecordingStorage(): RecordingStorageResult {
     cleanupPlayback();
   }, [cleanupPlayback]);
 
+  const seek = useCallback((time: number) => {
+    if (audioElementRef.current) {
+      audioElementRef.current.currentTime = time;
+      setPlaybackTime(time);
+    }
+  }, []);
+
   return {
     recordings,
     isLoading,
@@ -199,6 +221,9 @@ export function useRecordingStorage(): RecordingStorageResult {
     downloadRecording,
     playRecording,
     stopPlayback,
+    seek,
     playingId,
+    playbackTime,
+    playbackDuration,
   };
 }

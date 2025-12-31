@@ -36,7 +36,10 @@ type RecordingListProps = {
   readonly onDownload: (id: string, format: AudioFormat) => void;
   readonly onPlay: (id: string) => void;
   readonly onStop: () => void;
+  readonly onSeek: (time: number) => void;
   readonly playingId: string | null;
+  readonly playbackTime: number;
+  readonly playbackDuration: number;
   readonly isConverting: boolean;
   readonly defaultFormat: AudioFormat;
 };
@@ -80,7 +83,10 @@ export function RecordingList({
   onDownload,
   onPlay,
   onStop,
+  onSeek,
   playingId,
+  playbackTime,
+  playbackDuration,
   isConverting,
   defaultFormat,
 }: RecordingListProps) {
@@ -103,86 +109,113 @@ export function RecordingList({
             </div>
           ) : (
             <div className="space-y-2">
-              {recordings.map((recording) => (
-                <div
-                  key={recording.id}
-                  className="bg-muted rounded-lg p-3 flex items-center justify-between gap-3"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">
-                      {formatDate(recording.createdAt)}
-                    </div>
-                    <div className="flex gap-3 text-xs text-muted-foreground">
-                      <span>{formatDuration(recording.duration)}</span>
-                      <span className="text-yellow-500">
-                        {formatTimeRemaining(recording.expiresAt)}
-                      </span>
-                    </div>
-                  </div>
+              {recordings.map((recording) => {
+                const isPlaying = playingId === recording.id;
+                return (
+                  <div
+                    key={recording.id}
+                    className="bg-muted rounded-lg p-3 space-y-2"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">
+                          {formatDate(recording.createdAt)}
+                        </div>
+                        <div className="flex gap-3 text-xs text-muted-foreground">
+                          <span>{formatDuration(recording.duration)}</span>
+                          <span className="text-yellow-500">
+                            {formatTimeRemaining(recording.expiresAt)}
+                          </span>
+                        </div>
+                      </div>
 
-                  <div className="flex gap-2">
-                    {playingId === recording.id ? (
-                      <Button variant="secondary" size="sm" onClick={onStop}>
-                        <Square className="h-4 w-4" />
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => {
-                          onPlay(recording.id);
-                        }}
-                      >
-                        <Play className="h-4 w-4" />
-                      </Button>
-                    )}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          disabled={isConverting}
-                        >
-                          {isConverting ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <>
-                              <Download className="h-4 w-4" />
-                              <ChevronDown className="h-3 w-3 ml-1" />
-                            </>
-                          )}
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {supportedFormats.map((format) => (
-                          <DropdownMenuItem
-                            key={format}
+                      <div className="flex gap-2">
+                        {isPlaying ? (
+                          <Button variant="secondary" size="sm" onClick={onStop}>
+                            <Square className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="secondary"
+                            size="sm"
                             onClick={() => {
-                              onDownload(recording.id, format);
+                              onPlay(recording.id);
                             }}
                           >
-                            {AUDIO_FORMAT_LABELS[format]}
-                            {format === defaultFormat && (
-                              <span className="ml-2 text-xs text-muted-foreground">
-                                (デフォルト)
-                              </span>
-                            )}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => {
-                        onDelete(recording.id);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                            <Play className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              disabled={isConverting}
+                            >
+                              {isConverting ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <>
+                                  <Download className="h-4 w-4" />
+                                  <ChevronDown className="h-3 w-3 ml-1" />
+                                </>
+                              )}
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {supportedFormats.map((format) => (
+                              <DropdownMenuItem
+                                key={format}
+                                onClick={() => {
+                                  onDownload(recording.id, format);
+                                }}
+                              >
+                                {AUDIO_FORMAT_LABELS[format]}
+                                {format === defaultFormat && (
+                                  <span className="ml-2 text-xs text-muted-foreground">
+                                    (デフォルト)
+                                  </span>
+                                )}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            onDelete(recording.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {isPlaying && playbackDuration > 0 && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground w-10 text-right">
+                          {formatDuration(playbackTime)}
+                        </span>
+                        <input
+                          type="range"
+                          min={0}
+                          max={playbackDuration}
+                          step={0.1}
+                          value={playbackTime}
+                          onChange={(e) => {
+                            onSeek(Number(e.target.value));
+                          }}
+                          className="flex-1 h-1.5 bg-secondary rounded-full appearance-none cursor-pointer accent-primary [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary"
+                        />
+                        <span className="text-xs text-muted-foreground w-10">
+                          {formatDuration(playbackDuration)}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

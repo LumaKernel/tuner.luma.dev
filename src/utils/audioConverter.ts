@@ -1,4 +1,3 @@
-import { Mp3Encoder } from "@breezystack/lamejs";
 import {
   type AudioFormat,
   AUDIO_FORMAT_EXTENSIONS,
@@ -83,8 +82,10 @@ function floatTo16BitPCM(float32Array: Float32Array): Int16Array {
   return int16Array;
 }
 
-// Convert AudioBuffer to MP3 Blob
-function audioBufferToMp3(buffer: AudioBuffer): Blob {
+// Convert AudioBuffer to MP3 Blob (dynamically imports lamejs)
+async function audioBufferToMp3(buffer: AudioBuffer): Promise<Blob> {
+  const { Mp3Encoder } = await import("@breezystack/lamejs");
+
   const numChannels = buffer.numberOfChannels;
   const sampleRate = buffer.sampleRate;
   const kbps = 128;
@@ -176,7 +177,7 @@ export async function convertAudioBlob(
 
   if (format === "mp3") {
     return {
-      blob: audioBufferToMp3(audioBuffer),
+      blob: await audioBufferToMp3(audioBuffer),
       extension: AUDIO_FORMAT_EXTENSIONS.mp3,
     };
   }

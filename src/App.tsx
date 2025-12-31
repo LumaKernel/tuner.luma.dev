@@ -49,7 +49,10 @@ function TunerApp() {
     downloadRecording,
     playRecording,
     stopPlayback,
+    seek,
     playingId,
+    playbackTime,
+    playbackDuration,
     isConverting,
   } = useRecordingStorage();
 
@@ -222,7 +225,10 @@ function TunerApp() {
         onDownload={downloadRecording}
         onPlay={playRecording}
         onStop={stopPlayback}
+        onSeek={seek}
         playingId={playingId}
+        playbackTime={playbackTime}
+        playbackDuration={playbackDuration}
         isConverting={isConverting}
         defaultFormat={settings.state.audioFormat}
       />
