@@ -207,27 +207,26 @@ export function RecordingList({
                       </div>
                     </div>
 
-                    {isPlaying && playbackDuration > 0 && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground w-10 text-right">
-                          {formatDuration(playbackTime)}
-                        </span>
-                        <input
-                          type="range"
-                          min={0}
-                          max={playbackDuration}
-                          step={0.1}
-                          value={playbackTime}
-                          onChange={(e) => {
-                            onSeek(Number(e.target.value));
-                          }}
-                          className="flex-1 h-1.5 bg-secondary rounded-full appearance-none cursor-pointer accent-primary [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary"
-                        />
-                        <span className="text-xs text-muted-foreground w-10">
-                          {formatDuration(playbackDuration)}
-                        </span>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground w-10 text-right">
+                        {formatDuration(isPlaying ? playbackTime : 0)}
+                      </span>
+                      <input
+                        type="range"
+                        min={0}
+                        max={isPlaying && playbackDuration > 0 ? playbackDuration : recording.duration}
+                        step={0.1}
+                        value={isPlaying ? playbackTime : 0}
+                        onChange={(e) => {
+                          onSeek(Number(e.target.value));
+                        }}
+                        disabled={!isPlaying}
+                        className="flex-1 h-1.5 bg-secondary rounded-full appearance-none cursor-pointer accent-primary disabled:opacity-50 disabled:cursor-default [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary"
+                      />
+                      <span className="text-xs text-muted-foreground w-10">
+                        {formatDuration(isPlaying && playbackDuration > 0 ? playbackDuration : recording.duration)}
+                      </span>
+                    </div>
                   </div>
                 );
               })}
