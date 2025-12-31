@@ -1,50 +1,16 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { get, set, del } from "idb-keyval";
 import type { Recording, RecordingMeta } from "@/types";
 
 const LIST_KEY = "recording-list";
 
-function createWavBlob(audioData: Float32Array, sampleRate: number): Blob {
-  const numChannels = 1;
-  const bitsPerSample = 16;
-  const bytesPerSample = bitsPerSample / 8;
-  const blockAlign = numChannels * bytesPerSample;
-  const byteRate = sampleRate * blockAlign;
-  const dataSize = audioData.length * bytesPerSample;
-  const bufferSize = 44 + dataSize;
-
-  const buffer = new ArrayBuffer(bufferSize);
-  const view = new DataView(buffer);
-
-  const writeString = (offset: number, str: string) => {
-    for (let i = 0; i < str.length; i++) {
-      view.setUint8(offset + i, str.charCodeAt(i));
-    }
-  };
-
-  writeString(0, "RIFF");
-  view.setUint32(4, bufferSize - 8, true);
-  writeString(8, "WAVE");
-  writeString(12, "fmt ");
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, numChannels, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, byteRate, true);
-  view.setUint16(32, blockAlign, true);
-  view.setUint16(34, bitsPerSample, true);
-  writeString(36, "data");
-  view.setUint32(40, dataSize, true);
-
-  let offset = 44;
-  for (const value of audioData) {
-    const sample = Math.max(-1, Math.min(1, value));
-    const intSample = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
-    view.setInt16(offset, intSample, true);
-    offset += 2;
-  }
-
-  return new Blob([buffer], { type: "audio/wav" });
+// Get file extension from MIME type
+function getExtensionFromMimeType(mimeType: string): string {
+  if (mimeType.includes("webm")) return "webm";
+  if (mimeType.includes("ogg")) return "ogg";
+  if (mimeType.includes("mp4")) return "m4a";
+  if (mimeType.includes("wav")) return "wav";
+  return "audio";
 }
 
 type RecordingStorageResult = {
@@ -55,11 +21,28 @@ type RecordingStorageResult = {
   readonly deleteRecording: (id: string) => Promise<void>;
   readonly downloadRecording: (id: string) => Promise<void>;
   readonly playRecording: (id: string) => Promise<void>;
+  readonly stopPlayback: () => void;
+  readonly playingId: string | null;
 };
 
 export function useRecordingStorage(): RecordingStorageResult {
   const [recordings, setRecordings] = useState<readonly RecordingMeta[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const audioElementRef = useRef<HTMLAudioElement | null>(null);
+  const objectUrlRef = useRef<string | null>(null);
+
+  const cleanupPlayback = useCallback(() => {
+    if (audioElementRef.current) {
+      audioElementRef.current.pause();
+      audioElementRef.current = null;
+    }
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+    setPlayingId(null);
+  }, []);
 
   const cleanupExpired = useCallback(async () => {
     const now = Date.now();
@@ -87,7 +70,6 @@ export function useRecordingStorage(): RecordingStorageResult {
     return validIds;
   }, []);
 
-  // Refresh is called explicitly when dialog opens, not via useEffect
   const refresh = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -136,7 +118,6 @@ export function useRecordingStorage(): RecordingStorageResult {
       const newList = list.filter((item) => item !== id);
       await set(LIST_KEY, newList);
 
-      // Update local state directly instead of refetching
       setRecordings((current) => current.filter((r) => r.id !== id));
     } catch (error) {
       console.error("Failed to delete recording:", error);
@@ -148,11 +129,11 @@ export function useRecordingStorage(): RecordingStorageResult {
       const recording = await get<Recording>(`recording-${id}`);
       if (!recording) return;
 
-      const blob = createWavBlob(recording.audioData, recording.sampleRate);
-      const url = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(recording.audioBlob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `recording-${new Date(recording.createdAt).toISOString().slice(0, 19).replace(/:/g, "-")}.wav`;
+      const ext = getExtensionFromMimeType(recording.mimeType);
+      a.download = `recording-${new Date(recording.createdAt).toISOString().slice(0, 19).replace(/:/g, "-")}.${ext}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -162,27 +143,43 @@ export function useRecordingStorage(): RecordingStorageResult {
     }
   }, []);
 
-  const playRecording = useCallback(async (id: string): Promise<void> => {
-    try {
-      const recording = await get<Recording>(`recording-${id}`);
-      if (!recording) return;
+  const playRecording = useCallback(
+    async (id: string): Promise<void> => {
+      try {
+        // Stop any current playback
+        cleanupPlayback();
 
-      const audioContext = new AudioContext();
-      const buffer = audioContext.createBuffer(
-        1,
-        recording.audioData.length,
-        recording.sampleRate,
-      );
-      buffer.getChannelData(0).set(recording.audioData);
+        const recording = await get<Recording>(`recording-${id}`);
+        if (!recording) return;
 
-      const source = audioContext.createBufferSource();
-      source.buffer = buffer;
-      source.connect(audioContext.destination);
-      source.start();
-    } catch (error) {
-      console.error("Failed to play recording:", error);
-    }
-  }, []);
+        const url = URL.createObjectURL(recording.audioBlob);
+        objectUrlRef.current = url;
+
+        const audio = new Audio(url);
+        audioElementRef.current = audio;
+        setPlayingId(id);
+
+        audio.onended = () => {
+          cleanupPlayback();
+        };
+
+        audio.onerror = () => {
+          console.error("Failed to play recording");
+          cleanupPlayback();
+        };
+
+        await audio.play();
+      } catch (error) {
+        console.error("Failed to play recording:", error);
+        cleanupPlayback();
+      }
+    },
+    [cleanupPlayback],
+  );
+
+  const stopPlayback = useCallback(() => {
+    cleanupPlayback();
+  }, [cleanupPlayback]);
 
   return {
     recordings,
@@ -192,5 +189,7 @@ export function useRecordingStorage(): RecordingStorageResult {
     deleteRecording,
     downloadRecording,
     playRecording,
+    stopPlayback,
+    playingId,
   };
 }

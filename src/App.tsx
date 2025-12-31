@@ -26,7 +26,7 @@ function TunerApp() {
   const settings = useSettings();
 
   const { devices, isLoading, error, refreshDevices } = useMicrophoneDevices();
-  const { isActive, startAudio, audioData, stereoData, sampleRate } =
+  const { isActive, startAudio, audioData, stereoData, sampleRate, stream } =
     useAudioInput();
 
   const { currentPitch, pitchHistory } = usePitchDetection(
@@ -37,13 +37,19 @@ function TunerApp() {
   const volumeLevel = useVolumeLevel(stereoData);
 
   const { saveRecording } = useRecordingBuffer(
-    audioData,
-    sampleRate,
+    stream,
     settings.state.recordingDuration,
   );
 
-  const { recordings, refresh, deleteRecording, downloadRecording } =
-    useRecordingStorage();
+  const {
+    recordings,
+    refresh,
+    deleteRecording,
+    downloadRecording,
+    playRecording,
+    stopPlayback,
+    playingId,
+  } = useRecordingStorage();
 
   // Track if we've initialized device selection
   const initializedRef = useRef(false);
@@ -212,6 +218,9 @@ function TunerApp() {
         recordings={recordings}
         onDelete={deleteRecording}
         onDownload={downloadRecording}
+        onPlay={playRecording}
+        onStop={stopPlayback}
+        playingId={playingId}
       />
     </div>
   );

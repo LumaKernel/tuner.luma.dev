@@ -13,6 +13,7 @@ type AudioInputState = {
   readonly audioData: Float32Array | null;
   readonly stereoData: StereoAudioData | null;
   readonly sampleRate: number;
+  readonly stream: MediaStream | null;
   readonly startAudio: (deviceId?: string) => Promise<void>;
 };
 
@@ -34,6 +35,7 @@ export function useAudioInput(): AudioInputState {
   const [audioData, setAudioData] = useState<Float32Array | null>(null);
   const [stereoData, setStereoData] = useState<StereoAudioData | null>(null);
   const [sampleRate, setSampleRate] = useState(44100);
+  const [stream, setStream] = useState<MediaStream | null>(null);
 
   const resourcesRef = useRef<AudioResources | null>(null);
 
@@ -54,6 +56,7 @@ export function useAudioInput(): AudioInputState {
     setIsActive(false);
     setAudioData(null);
     setStereoData(null);
+    setStream(null);
   }, []);
 
   const startAudio = useCallback(
@@ -116,6 +119,7 @@ export function useAudioInput(): AudioInputState {
 
       resourcesRef.current = resources;
       setSampleRate(audioContext.sampleRate);
+      setStream(stream);
       setIsActive(true);
 
       // Start audio processing loop
@@ -170,6 +174,7 @@ export function useAudioInput(): AudioInputState {
     audioData,
     stereoData,
     sampleRate,
+    stream,
     startAudio,
   };
 }

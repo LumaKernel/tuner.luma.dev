@@ -1,4 +1,4 @@
-import { Download, Trash2 } from "lucide-react";
+import { Download, Trash2, Play, Square } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,9 @@ type RecordingListProps = {
   readonly recordings: readonly RecordingMeta[];
   readonly onDelete: (id: string) => void;
   readonly onDownload: (id: string) => void;
+  readonly onPlay: (id: string) => void;
+  readonly onStop: () => void;
+  readonly playingId: string | null;
 };
 
 function formatDate(timestamp: number): string {
@@ -54,6 +57,9 @@ export function RecordingList({
   recordings,
   onDelete,
   onDownload,
+  onPlay,
+  onStop,
+  playingId,
 }: RecordingListProps) {
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -90,6 +96,21 @@ export function RecordingList({
                   </div>
 
                   <div className="flex gap-2">
+                    {playingId === recording.id ? (
+                      <Button variant="secondary" size="sm" onClick={onStop}>
+                        <Square className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          onPlay(recording.id);
+                        }}
+                      >
+                        <Play className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button
                       variant="secondary"
                       size="sm"

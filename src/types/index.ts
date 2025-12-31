@@ -25,8 +25,8 @@ export type Recording = {
   readonly createdAt: number;
   readonly expiresAt: number;
   readonly duration: number;
-  readonly sampleRate: number;
-  readonly audioData: Float32Array;
+  readonly mimeType: string;
+  readonly audioBlob: Blob;
   readonly pitchData: readonly PitchHistoryEntry[];
 };
 

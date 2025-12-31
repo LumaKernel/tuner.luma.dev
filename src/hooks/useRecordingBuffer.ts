@@ -1,11 +1,28 @@
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useEffect } from "react";
 import { get, set } from "idb-keyval";
 import type { Recording, PitchHistoryEntry } from "@/types";
 
 const EXPIRATION_DAYS = 7;
+const CHUNK_INTERVAL_MS = 1000; // Request data every 1 second
 
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
+// Get the best supported MIME type for audio recording
+function getSupportedMimeType(): string {
+  const types = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/ogg;codecs=opus",
+    "audio/mp4",
+  ];
+  for (const type of types) {
+    if (MediaRecorder.isTypeSupported(type)) {
+      return type;
+    }
+  }
+  return "";
 }
 
 type RecordingBufferResult = {
@@ -13,65 +30,90 @@ type RecordingBufferResult = {
 };
 
 export function useRecordingBuffer(
-  audioData: Float32Array | null,
-  sampleRate: number,
+  stream: MediaStream | null,
   bufferDurationSeconds: number,
 ): RecordingBufferResult {
-  const audioBufferRef = useRef<Float32Array[]>([]);
-  const pitchHistoryRef = useRef<PitchHistoryEntry[]>([]);
-  const lastProcessedRef = useRef<Float32Array | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const chunkTimestampsRef = useRef<number[]>([]);
+  const mimeTypeRef = useRef<string>("");
+  const pitchHistoryRef = useRef<readonly PitchHistoryEntry[]>([]);
 
-  const maxSamples = sampleRate * bufferDurationSeconds;
-
-  // Accumulate audio data during render (if new data)
-  if (audioData && audioData !== lastProcessedRef.current) {
-    lastProcessedRef.current = audioData;
-    audioBufferRef.current.push(new Float32Array(audioData));
-
-    // Trim oldest chunks if exceeding max
-    let totalSamples = 0;
-    for (const chunk of audioBufferRef.current) {
-      totalSamples += chunk.length;
-    }
-
-    while (totalSamples > maxSamples && audioBufferRef.current.length > 1) {
-      const removed = audioBufferRef.current.shift();
-      if (removed) {
-        totalSamples -= removed.length;
+  // Setup MediaRecorder when stream changes
+  useEffect(() => {
+    if (!stream) {
+      // Cleanup when stream is removed
+      if (mediaRecorderRef.current) {
+        mediaRecorderRef.current.stop();
+        mediaRecorderRef.current = null;
       }
+      chunksRef.current = [];
+      chunkTimestampsRef.current = [];
+      return;
     }
-  }
+
+    const mimeType = getSupportedMimeType();
+    if (!mimeType) {
+      console.error("No supported audio MIME type found");
+      return;
+    }
+    mimeTypeRef.current = mimeType;
+
+    const recorder = new MediaRecorder(stream, { mimeType });
+    mediaRecorderRef.current = recorder;
+
+    recorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        chunksRef.current.push(event.data);
+        chunkTimestampsRef.current.push(Date.now());
+
+        // Trim old chunks to maintain buffer duration
+        const now = Date.now();
+        const cutoffTime = now - bufferDurationSeconds * 1000;
+        while (
+          chunkTimestampsRef.current.length > 0 &&
+          chunkTimestampsRef.current[0] < cutoffTime
+        ) {
+          chunksRef.current.shift();
+          chunkTimestampsRef.current.shift();
+        }
+      }
+    };
+
+    recorder.start(CHUNK_INTERVAL_MS);
+
+    return () => {
+      if (recorder.state !== "inactive") {
+        recorder.stop();
+      }
+    };
+  }, [stream, bufferDurationSeconds]);
 
   const saveRecording = useCallback(async (): Promise<string | null> => {
-    if (audioBufferRef.current.length === 0) {
+    if (chunksRef.current.length === 0) {
       return null;
     }
 
-    // Concatenate all audio chunks
-    let totalLength = 0;
-    for (const chunk of audioBufferRef.current) {
-      totalLength += chunk.length;
-    }
-
-    const combinedAudio = new Float32Array(totalLength);
-    let offset = 0;
-    for (const chunk of audioBufferRef.current) {
-      combinedAudio.set(chunk, offset);
-      offset += chunk.length;
-    }
+    // Create a blob from all chunks
+    const audioBlob = new Blob(chunksRef.current, {
+      type: mimeTypeRef.current,
+    });
 
     const now = Date.now();
     const id = generateId();
-    const duration = totalLength / sampleRate;
+
+    // Calculate duration from timestamps
+    const firstTimestamp = chunkTimestampsRef.current[0] ?? now;
+    const duration = (now - firstTimestamp) / 1000;
 
     const recording: Recording = {
       id,
       createdAt: now,
       expiresAt: now + EXPIRATION_DAYS * 24 * 60 * 60 * 1000,
       duration,
-      sampleRate,
-      audioData: combinedAudio,
-      pitchData: [...pitchHistoryRef.current],
+      mimeType: mimeTypeRef.current,
+      audioBlob,
+      pitchData: pitchHistoryRef.current,
     };
 
     try {
@@ -89,7 +131,7 @@ export function useRecordingBuffer(
       console.error("Failed to save recording:", error);
       return null;
     }
-  }, [sampleRate]);
+  }, []);
 
   return { saveRecording };
 }
