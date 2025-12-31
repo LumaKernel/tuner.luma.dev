@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Github, ListMusic, Settings } from "lucide-react";
+import { Github, ListMusic, Menu, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { TunerDisplay } from "./components/TunerDisplay";
 import { ControlPanel } from "./components/ControlPanel";
@@ -11,6 +11,13 @@ import { VolumeLevel } from "./components/VolumeLevel";
 import { ModeToggle } from "./components/mode-toggle";
 import { ThemeProvider } from "./components/theme-provider";
 import { Button } from "./components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "./components/ui/sheet";
 import { Toaster } from "./components/ui/sonner";
 import { useAudioInput } from "./hooks/useAudioInput";
 import { usePitchDetection } from "./hooks/usePitchDetection";
@@ -23,6 +30,7 @@ import { useSettings, SettingsProvider } from "./hooks/useSettings";
 function TunerApp() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isRecordingsOpen, setIsRecordingsOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const settings = useSettings();
@@ -170,7 +178,9 @@ function TunerApp() {
       <header className="p-4 border-b">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <h1 className="text-xl font-bold tracking-tight">tuner.luma.dev</h1>
-          <div className="flex items-center gap-2">
+
+          {/* Desktop menu */}
+          <div className="hidden md:flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={handleOpenRecordings}>
               <ListMusic />
               録音一覧
@@ -197,6 +207,58 @@ function TunerApp() {
               </a>
             </Button>
           </div>
+
+          {/* Mobile menu */}
+          <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+            <SheetTrigger asChild className="md:hidden">
+              <Button variant="ghost" size="icon" aria-label="メニュー">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-64">
+              <SheetHeader>
+                <SheetTitle>メニュー</SheetTitle>
+              </SheetHeader>
+              <nav className="flex flex-col gap-2 mt-4">
+                <Button
+                  variant="ghost"
+                  className="justify-start"
+                  onClick={() => {
+                    handleOpenRecordings();
+                    setIsMenuOpen(false);
+                  }}
+                >
+                  <ListMusic className="mr-2 h-4 w-4" />
+                  録音一覧
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="justify-start"
+                  onClick={() => {
+                    setIsSettingsOpen(true);
+                    setIsMenuOpen(false);
+                  }}
+                >
+                  <Settings className="mr-2 h-4 w-4" />
+                  設定
+                </Button>
+                <div className="flex items-center gap-2 px-3 py-2">
+                  <span className="text-sm">テーマ</span>
+                  <ModeToggle />
+                </div>
+                <Button variant="ghost" className="justify-start" asChild>
+                  <a
+                    href="https://github.com/LumaKernel/tuner.luma.dev"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Github className="mr-2 h-4 w-4" />
+                    GitHub
+                  </a>
+                </Button>
+              </nav>
+            </SheetContent>
+          </Sheet>
         </div>
       </header>
 
