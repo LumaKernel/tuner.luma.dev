@@ -7,3 +7,9 @@ ultrathink
 
 スマホのときはヘッダはハンバーガーメニューにしよう。
 ultrathink
+
+
+
+トーストはどかせるようにしてください。
+ultrathink
+
