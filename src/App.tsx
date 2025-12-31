@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { ListMusic, Settings } from "lucide-react";
+import { Github, ListMusic, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { TunerDisplay } from "./components/TunerDisplay";
 import { ControlPanel } from "./components/ControlPanel";
@@ -186,6 +186,16 @@ function TunerApp() {
               設定
             </Button>
             <ModeToggle />
+            <Button variant="ghost" size="icon" asChild>
+              <a
+                href="https://github.com/LumaKernel/tuner.luma.dev"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="GitHub"
+              >
+                <Github className="h-[1.2rem] w-[1.2rem]" />
+              </a>
+            </Button>
           </div>
         </div>
       </header>
