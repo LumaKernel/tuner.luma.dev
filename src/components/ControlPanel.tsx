@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Save } from "lucide-react";
+import { Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -11,6 +11,7 @@ import {
 
 type ControlPanelProps = {
   readonly onSave: () => void;
+  readonly isSaving?: boolean;
   readonly recordingDuration: number;
   readonly onDurationChange: (duration: number) => void;
 };
@@ -38,6 +39,7 @@ function getDurationOption(duration: number): DurationOption {
 
 export function ControlPanel({
   onSave,
+  isSaving = false,
   recordingDuration,
   onDurationChange,
 }: ControlPanelProps) {
@@ -135,9 +137,9 @@ export function ControlPanel({
         )}
       </div>
 
-      <Button onClick={onSave} size="lg">
-        <Save />
-        保存 ({formatDuration(recordingDuration)})
+      <Button onClick={onSave} size="lg" disabled={isSaving}>
+        {isSaving ? <Loader2 className="animate-spin" /> : <Save />}
+        {isSaving ? "保存中..." : `保存 (${formatDuration(recordingDuration)})`}
       </Button>
     </div>
   );

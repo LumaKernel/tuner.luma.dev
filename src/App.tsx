@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { ListMusic, Settings } from "lucide-react";
+import { toast } from "sonner";
 import { TunerDisplay } from "./components/TunerDisplay";
 import { ControlPanel } from "./components/ControlPanel";
 import { PitchInfo } from "./components/PitchInfo";
@@ -11,6 +12,7 @@ import { VolumeLevel } from "./components/VolumeLevel";
 import { ModeToggle } from "./components/mode-toggle";
 import { ThemeProvider } from "./components/theme-provider";
 import { Button } from "./components/ui/button";
+import { Toaster } from "./components/ui/sonner";
 import { useAudioInput } from "./hooks/useAudioInput";
 import { usePitchDetection } from "./hooks/usePitchDetection";
 import { useVolumeLevel } from "./hooks/useVolumeLevel";
@@ -23,6 +25,7 @@ function TunerApp() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isRecordingsOpen, setIsRecordingsOpen] = useState(false);
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
   const settings = useSettings();
 
   const { devices, isLoading, error, refreshDevices } = useMicrophoneDevices();
@@ -80,8 +83,20 @@ function TunerApp() {
     [isActive, startAudio],
   );
 
-  const handleSave = useCallback(() => {
-    void saveRecording();
+  const handleSave = useCallback(async () => {
+    setIsSaving(true);
+    try {
+      const id = await saveRecording();
+      if (id) {
+        toast.success("録音を保存しました");
+      } else {
+        toast.error("保存するデータがありません");
+      }
+    } catch {
+      toast.error("保存に失敗しました");
+    } finally {
+      setIsSaving(false);
+    }
   }, [saveRecording]);
 
   const handleStart = useCallback(() => {
@@ -92,6 +107,30 @@ function TunerApp() {
     setIsRecordingsOpen(true);
     void refresh();
   }, [refresh]);
+
+  const handleDownload = useCallback(
+    async (id: string, format: Parameters<typeof downloadRecording>[1]) => {
+      try {
+        await downloadRecording(id, format);
+        toast.success("ダウンロードを開始しました");
+      } catch {
+        toast.error("ダウンロードに失敗しました");
+      }
+    },
+    [downloadRecording],
+  );
+
+  const handleDelete = useCallback(
+    async (id: string) => {
+      try {
+        await deleteRecording(id);
+        toast.success("削除しました");
+      } catch {
+        toast.error("削除に失敗しました");
+      }
+    },
+    [deleteRecording],
+  );
 
   const handleAutoStartChange = useCallback(
     (autoStart: boolean) => {
@@ -196,6 +235,7 @@ function TunerApp() {
         {isActive && (
           <ControlPanel
             onSave={handleSave}
+            isSaving={isSaving}
             recordingDuration={settings.state.recordingDuration}
             onDurationChange={(duration) => {
               settings.update((draft) => {
@@ -221,8 +261,8 @@ function TunerApp() {
           setIsRecordingsOpen(false);
         }}
         recordings={recordings}
-        onDelete={deleteRecording}
-        onDownload={downloadRecording}
+        onDelete={handleDelete}
+        onDownload={handleDownload}
         onPlay={playRecording}
         onStop={stopPlayback}
         onSeek={seek}
@@ -241,6 +281,7 @@ export function App() {
     <ThemeProvider defaultTheme="system" storageKey="tuner-ui-theme">
       <SettingsProvider>
         <TunerApp />
+        <Toaster position="bottom-center" />
       </SettingsProvider>
     </ThemeProvider>
   );
