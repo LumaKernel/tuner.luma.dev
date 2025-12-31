@@ -131,7 +131,11 @@ export function RecordingList({
 
                       <div className="flex gap-2">
                         {isPlaying ? (
-                          <Button variant="secondary" size="sm" onClick={onStop}>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={onStop}
+                          >
                             <Square className="h-4 w-4" />
                           </Button>
                         ) : (

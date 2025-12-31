@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,42 +53,28 @@ export function ControlPanel({
   onDeviceChange,
   isDevicesLoading,
 }: ControlPanelProps) {
-  const [option, setOption] = useState<DurationOption>(() =>
-    getDurationOption(recordingDuration),
-  );
-  const [customMinutes, setCustomMinutes] = useState(() =>
-    Math.floor(recordingDuration / 60),
-  );
-  const [customSeconds, setCustomSeconds] = useState(
-    () => recordingDuration % 60,
-  );
+  // Track whether user has explicitly selected custom mode
+  const [isCustomMode, setIsCustomMode] = useState(false);
 
-  // Sync option when recordingDuration changes externally
-  useEffect(() => {
-    setOption(getDurationOption(recordingDuration));
-    if (getDurationOption(recordingDuration) === "custom") {
-      setCustomMinutes(Math.floor(recordingDuration / 60));
-      setCustomSeconds(recordingDuration % 60);
-    }
-  }, [recordingDuration]);
+  // Derive option from recordingDuration prop (pure computation during render)
+  const derivedOption = getDurationOption(recordingDuration);
+  const option: DurationOption = isCustomMode ? "custom" : derivedOption;
+
+  // Derive custom input values directly from recordingDuration (controlled inputs)
+  const customMinutes = Math.floor(recordingDuration / 60);
+  const customSeconds = recordingDuration % 60;
 
   const handleOptionChange = (value: DurationOption) => {
-    setOption(value);
-    if (value !== "custom") {
-      onDurationChange(parseInt(value, 10));
+    if (value === "custom") {
+      setIsCustomMode(true);
     } else {
-      // Initialize custom inputs from current duration
-      const mins = Math.floor(recordingDuration / 60);
-      const secs = recordingDuration % 60;
-      setCustomMinutes(mins);
-      setCustomSeconds(secs);
-      // Duration doesn't change when switching to custom
+      setIsCustomMode(false);
+      onDurationChange(parseInt(value, 10));
     }
   };
 
   const handleCustomMinutesChange = (value: string) => {
     const mins = Math.max(0, Math.min(59, parseInt(value, 10) || 0));
-    setCustomMinutes(mins);
     const newDuration = mins * 60 + customSeconds;
     if (newDuration > 0) {
       onDurationChange(newDuration);
@@ -97,7 +83,6 @@ export function ControlPanel({
 
   const handleCustomSecondsChange = (value: string) => {
     const secs = Math.max(0, Math.min(59, parseInt(value, 10) || 0));
-    setCustomSeconds(secs);
     const newDuration = customMinutes * 60 + secs;
     if (newDuration > 0) {
       onDurationChange(newDuration);

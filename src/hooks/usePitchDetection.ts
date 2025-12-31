@@ -1,12 +1,13 @@
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useEffect, useState } from "react";
 import type { PitchData, PitchHistoryEntry } from "@/types";
+import type * as PitchDetectorModule from "@/wasm/pkg/pitch_detector";
 
 const HISTORY_DURATION_MS = 30000;
 const MIN_FREQUENCY = 60;
 const MAX_FREQUENCY = 2000;
 
 // WASM module state - initialized lazily on first use
-let wasmModule: typeof import("@/wasm/pkg/pitch_detector") | null = null;
+let wasmModule: typeof PitchDetectorModule | null = null;
 let wasmInitPromise: Promise<void> | null = null;
 
 function ensureWasmInit(): void {
@@ -14,7 +15,8 @@ function ensureWasmInit(): void {
 
   wasmInitPromise = (async () => {
     try {
-      const module = await import("@/wasm/pkg/pitch_detector");
+      const module: typeof PitchDetectorModule =
+        await import("@/wasm/pkg/pitch_detector");
       await module.default();
       module.init_panic_hook();
       wasmModule = module;
@@ -112,54 +114,66 @@ function getRMS(buffer: Float32Array): number {
 type PitchDetectionResult = {
   readonly currentPitch: PitchData;
   readonly pitchHistory: readonly PitchHistoryEntry[];
+  readonly timestamp: number;
 };
 
 export function usePitchDetection(
   audioData: Float32Array | null,
   sampleRate: number,
 ): PitchDetectionResult {
-  // Ref to accumulate history across renders
+  // State to hold filtered history - triggers re-renders when updated
+  const [pitchHistory, setPitchHistory] = useState<
+    readonly PitchHistoryEntry[]
+  >([]);
+  const [lastTimestamp, setLastTimestamp] = useState<number>(() => Date.now());
+
+  // Ref to accumulate history across renders (source of truth)
   const historyRef = useRef<PitchHistoryEntry[]>([]);
   const lastProcessedRef = useRef<Float32Array | null>(null);
 
-  // Process new audio data if it's different from last processed
-  // This runs during render, which is fine for pure computation
-  const now = Date.now();
+  // Process new audio data in an effect (side effect with impure Date.now())
+  useEffect(() => {
+    if (
+      !audioData ||
+      audioData === lastProcessedRef.current ||
+      audioData.length === 0
+    ) {
+      return;
+    }
 
-  if (
-    audioData &&
-    audioData !== lastProcessedRef.current &&
-    audioData.length > 0
-  ) {
     lastProcessedRef.current = audioData;
+    const now = Date.now();
 
     const rms = getRMS(audioData);
     if (rms >= 0.01) {
       const frequency = detectPitch(audioData, sampleRate);
       if (frequency > 0) {
-        historyRef.current.push({
-          frequency,
-          timestamp: now,
-        });
+        historyRef.current = [
+          ...historyRef.current,
+          {
+            frequency,
+            timestamp: now,
+          },
+        ];
       }
     }
-  }
 
-  // Filter history during render (pure computation)
-  const cutoff = now - HISTORY_DURATION_MS;
-  const filteredHistory = historyRef.current.filter(
-    (entry) => entry.timestamp > cutoff,
-  );
+    // Filter old entries
+    const cutoff = now - HISTORY_DURATION_MS;
+    const filtered = historyRef.current.filter(
+      (entry) => entry.timestamp > cutoff,
+    );
+    historyRef.current = filtered;
 
-  // Update ref if filtering removed items (to prevent memory leak)
-  if (filteredHistory.length !== historyRef.current.length) {
-    historyRef.current = filteredHistory;
-  }
+    // Update state to trigger re-render
+    setPitchHistory(filtered);
+    setLastTimestamp(now);
+  }, [audioData, sampleRate]);
 
-  // Derive current pitch from latest history entry
+  // Derive current pitch from latest history entry (pure computation)
   const currentPitch = useMemo((): PitchData => {
-    const lastEntry = filteredHistory[filteredHistory.length - 1];
-    if (lastEntry && now - lastEntry.timestamp < 200) {
+    const lastEntry = pitchHistory[pitchHistory.length - 1];
+    if (lastEntry && lastTimestamp - lastEntry.timestamp < 200) {
       return {
         frequency: lastEntry.frequency,
         note: null,
@@ -171,9 +185,9 @@ export function usePitchDetection(
       frequency: null,
       note: null,
       cents: 0,
-      timestamp: now,
+      timestamp: lastTimestamp,
     };
-  }, [filteredHistory, now]);
+  }, [pitchHistory, lastTimestamp]);
 
-  return { currentPitch, pitchHistory: filteredHistory };
+  return { currentPitch, pitchHistory, timestamp: lastTimestamp };
 }

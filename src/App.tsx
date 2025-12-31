@@ -31,10 +31,11 @@ function TunerApp() {
   const { isActive, startAudio, audioData, stereoData, sampleRate, stream } =
     useAudioInput();
 
-  const { currentPitch, pitchHistory } = usePitchDetection(
-    audioData,
-    sampleRate,
-  );
+  const {
+    currentPitch,
+    pitchHistory,
+    timestamp: pitchTimestamp,
+  } = usePitchDetection(audioData, sampleRate);
 
   const volumeLevel = useVolumeLevel(stereoData);
 
@@ -206,6 +207,7 @@ function TunerApp() {
             pitchHistory={pitchHistory}
             notation={settings.state.notation}
             accidental={settings.state.accidental}
+            now={pitchTimestamp}
           />
           {!isActive && (
             <StartOverlay

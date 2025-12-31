@@ -17,6 +17,7 @@ type TunerDisplayProps = {
   readonly pitchHistory: readonly PitchHistoryEntry[];
   readonly notation: Notation;
   readonly accidental: Accidental;
+  readonly now: number;
 };
 
 type GridLine = {
@@ -191,10 +192,8 @@ export function TunerDisplay({
   pitchHistory,
   notation,
   accidental,
+  now,
 }: TunerDisplayProps) {
-  // Calculate now once per render - updates come from pitchHistory changes
-  const now = Date.now();
-
   const pathD = buildPitchPath(pitchHistory, now);
   const lastEntry = pitchHistory[pitchHistory.length - 1];
 

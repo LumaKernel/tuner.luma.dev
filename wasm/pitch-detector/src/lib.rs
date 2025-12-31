@@ -175,7 +175,11 @@ mod tests {
         let sample_rate = 44100.0;
         let samples = generate_sine_wave(440.0, sample_rate, 2048);
         let detected = detect_pitch(&samples, sample_rate);
-        assert!((detected - 440.0).abs() < 5.0, "Expected ~440Hz, got {}", detected);
+        assert!(
+            (detected - 440.0).abs() < 5.0,
+            "Expected ~440Hz, got {}",
+            detected
+        );
     }
 
     #[test]
@@ -183,7 +187,11 @@ mod tests {
         let sample_rate = 44100.0;
         let samples = generate_sine_wave(220.0, sample_rate, 2048);
         let detected = detect_pitch(&samples, sample_rate);
-        assert!((detected - 220.0).abs() < 5.0, "Expected ~220Hz, got {}", detected);
+        assert!(
+            (detected - 220.0).abs() < 5.0,
+            "Expected ~220Hz, got {}",
+            detected
+        );
     }
 
     #[test]
