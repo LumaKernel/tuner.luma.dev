@@ -156,6 +156,17 @@ ultrathink
   実装しますか？
 
 
+> Failed to download recording: ReferenceError: MPEGMode is not defined
+      at lame_init_old (lamejs.js?v=8b212f39:11776:20)
+      at Lame2.lame_init (lamejs.js?v=8b212f39:11834:19)
+      at new Mp3Encoder (lamejs.js?v=8b212f39:15412:22)
+      at audioBufferToMp3 (audioConverter.ts:95:22)
+      at convertAudioBlob (audioConverter.ts:155:20)
+      at async useRecordingStorage.ts:132:37
+  (anonymous) @ useRecordingStorage.ts:146 mp3ダウンロードでエラー ultrathink
+
+
+
 形式を選択できるのはいいけど、wav/mp3も含めて形式の一覧として入れて、同様に設定で指定できる一覧に同列に入れよう。
 ultrathink
 
