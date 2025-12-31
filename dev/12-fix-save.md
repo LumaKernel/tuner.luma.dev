@@ -186,39 +186,39 @@ ultrathink
 ultrathink
 ⏺ 修正完了しました。
 
-  問題の原因と解決
+問題の原因と解決
 
-  問題: HTMLAudioElementはwebm/opus形式をサポートしないブラウザ（Safari等）がある
+問題: HTMLAudioElementはwebm/opus形式をサポートしないブラウザ（Safari等）がある
 
-  解決: AudioContext + AudioBufferSourceNode を使った再生に変更
+解決: AudioContext + AudioBufferSourceNode を使った再生に変更
 
-  再生機能の仕組み（修正後）
+再生機能の仕組み（修正後）
 
-  ┌─────────────────────────────────────────────────────────┐
-  │                       再生フロー                          │
-  ├─────────────────────────────────────────────────────────┤
-  │  1. IndexedDBから Recording を取得                       │
-  │                    ↓                                    │
-  │  2. decodeAudioBlob(blob) → AudioBuffer                 │
-  │     └─ AudioContext.decodeAudioData() で任意形式をデコード│
-  │                    ↓                                    │
-  │  3. AudioContext + AudioBufferSourceNode を作成          │
-  │                    ↓                                    │
-  │  4. source.connect(destination) で出力接続               │
-  │                    ↓                                    │
-  │  5. source.start(0, offset) で再生開始                   │
-  │                    ↓                                    │
-  │  6. requestAnimationFrame で再生位置を更新               │
-  └─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│ 再生フロー │
+├─────────────────────────────────────────────────────────┤
+│ 1. IndexedDBから Recording を取得 │
+│ ↓ │
+│ 2. decodeAudioBlob(blob) → AudioBuffer │
+│ └─ AudioContext.decodeAudioData() で任意形式をデコード│
+│ ↓ │
+│ 3. AudioContext + AudioBufferSourceNode を作成 │
+│ ↓ │
+│ 4. source.connect(destination) で出力接続 │
+│ ↓ │
+│ 5. source.start(0, offset) で再生開始 │
+│ ↓ │
+│ 6. requestAnimationFrame で再生位置を更新 │
+└─────────────────────────────────────────────────────────┘
 
-  シーク機能
+シーク機能
 
-  AudioBufferSourceNodeは途中から位置変更できないため、シーク時は：
-  1. 現在のSourceNodeを停止
-  2. 新しいSourceNodeを作成
-  3. source.start(0, newOffset) で指定位置から再生開始
+AudioBufferSourceNodeは途中から位置変更できないため、シーク時は：
 
-  これでwebm/opus形式でもSafari等全ブラウザで再生可能になりました。
+1. 現在のSourceNodeを停止
+2. 新しいSourceNodeを作成
+3. source.start(0, newOffset) で指定位置から再生開始
 
+これでwebm/opus形式でもSafari等全ブラウザで再生可能になりました。
 
 削除したら再生は止まってほしい ultrathink
