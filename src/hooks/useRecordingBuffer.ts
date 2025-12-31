@@ -1,6 +1,6 @@
 import { useRef, useCallback, useEffect } from "react";
 import { get, set } from "idb-keyval";
-import type { Recording, PitchHistoryEntry } from "@/types";
+import type { Recording, PitchHistoryEntry, AudioCodec } from "@/types";
 
 const EXPIRATION_DAYS = 7;
 const CHUNK_INTERVAL_MS = 1000; // Request data every 1 second
@@ -9,20 +9,52 @@ function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
-// Get the best supported MIME type for audio recording
-function getSupportedMimeType(): string {
-  const types = [
-    "audio/webm;codecs=opus",
-    "audio/webm",
-    "audio/ogg;codecs=opus",
-    "audio/mp4",
-  ];
-  for (const type of types) {
+// Priority order for auto codec selection
+const CODEC_PRIORITY: readonly string[] = [
+  "audio/webm;codecs=opus",
+  "audio/webm",
+  "audio/ogg;codecs=opus",
+  "audio/mp4",
+];
+
+// Get the MIME type based on codec setting
+function getMimeType(codec: AudioCodec): string {
+  if (codec === "auto") {
+    for (const type of CODEC_PRIORITY) {
+      if (MediaRecorder.isTypeSupported(type)) {
+        return type;
+      }
+    }
+    return "";
+  }
+  // Check if the specified codec is supported
+  if (MediaRecorder.isTypeSupported(codec)) {
+    return codec;
+  }
+  // Fallback to auto if specified codec is not supported
+  for (const type of CODEC_PRIORITY) {
     if (MediaRecorder.isTypeSupported(type)) {
       return type;
     }
   }
   return "";
+}
+
+// Get list of supported codecs for UI
+export function getSupportedCodecs(): readonly AudioCodec[] {
+  const supported: AudioCodec[] = ["auto"];
+  const codecs: readonly AudioCodec[] = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/ogg;codecs=opus",
+    "audio/mp4",
+  ];
+  for (const codec of codecs) {
+    if (MediaRecorder.isTypeSupported(codec)) {
+      supported.push(codec);
+    }
+  }
+  return supported;
 }
 
 type RecordingBufferResult = {
@@ -32,6 +64,7 @@ type RecordingBufferResult = {
 export function useRecordingBuffer(
   stream: MediaStream | null,
   bufferDurationSeconds: number,
+  audioCodec: AudioCodec = "auto",
 ): RecordingBufferResult {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -39,7 +72,7 @@ export function useRecordingBuffer(
   const mimeTypeRef = useRef<string>("");
   const pitchHistoryRef = useRef<readonly PitchHistoryEntry[]>([]);
 
-  // Setup MediaRecorder when stream changes
+  // Setup MediaRecorder when stream or codec changes
   useEffect(() => {
     if (!stream) {
       // Cleanup when stream is removed
@@ -52,7 +85,7 @@ export function useRecordingBuffer(
       return;
     }
 
-    const mimeType = getSupportedMimeType();
+    const mimeType = getMimeType(audioCodec);
     if (!mimeType) {
       console.error("No supported audio MIME type found");
       return;
@@ -87,7 +120,7 @@ export function useRecordingBuffer(
         recorder.stop();
       }
     };
-  }, [stream, bufferDurationSeconds]);
+  }, [stream, bufferDurationSeconds, audioCodec]);
 
   const saveRecording = useCallback(async (): Promise<string | null> => {
     if (chunksRef.current.length === 0) {

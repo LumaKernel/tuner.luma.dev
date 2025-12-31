@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import type { WritableDraft } from "immer";
 import {
   Dialog,
@@ -8,8 +8,22 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import type { Settings, Notation, Accidental } from "@/types";
+import { getSupportedCodecs } from "@/hooks/useRecordingBuffer";
+import {
+  type Settings,
+  type Notation,
+  type Accidental,
+  type AudioCodec,
+  AUDIO_CODEC_LABELS,
+} from "@/types";
 
 type SettingsDialogProps = {
   readonly open: boolean;
@@ -52,6 +66,17 @@ export function SettingsDialog({
     },
     [onSettingsChange],
   );
+
+  const handleAudioCodecChange = useCallback(
+    (audioCodec: AudioCodec) => {
+      onSettingsChange((draft) => {
+        draft.audioCodec = audioCodec;
+      });
+    },
+    [onSettingsChange],
+  );
+
+  const supportedCodecs = useMemo(() => getSupportedCodecs(), []);
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -119,6 +144,31 @@ export function SettingsDialog({
               checked={settings.autoStart}
               onCheckedChange={handleAutoStartChange}
             />
+          </div>
+
+          {/* Audio Codec */}
+          <div className="space-y-3">
+            <Label>録音フォーマット</Label>
+            <Select
+              value={settings.audioCodec}
+              onValueChange={(value) => {
+                handleAudioCodecChange(value as AudioCodec);
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {supportedCodecs.map((codec) => (
+                  <SelectItem key={codec} value={codec}>
+                    {AUDIO_CODEC_LABELS[codec]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              ダウンロード時のファイル形式を指定します
+            </p>
           </div>
         </div>
       </DialogContent>

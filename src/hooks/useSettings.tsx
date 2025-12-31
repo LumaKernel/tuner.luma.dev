@@ -15,6 +15,7 @@ const defaultSettings: Settings = {
   accidental: "sharp",
   recordingDuration: 30,
   autoStart: false,
+  audioCodec: "auto",
 };
 
 function loadSettings(): Settings {
