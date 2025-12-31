@@ -145,41 +145,52 @@ export function RecordingList({
                             <Play className="h-4 w-4" />
                           </Button>
                         )}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              disabled={isConverting}
-                            >
-                              {isConverting ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <>
-                                  <Download className="h-4 w-4" />
-                                  <ChevronDown className="h-3 w-3 ml-1" />
-                                </>
-                              )}
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {supportedFormats.map((format) => (
-                              <DropdownMenuItem
-                                key={format}
-                                onClick={() => {
-                                  onDownload(recording.id, format);
-                                }}
+                        <div className="flex">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            disabled={isConverting}
+                            onClick={() => {
+                              onDownload(recording.id, defaultFormat);
+                            }}
+                            className="rounded-r-none border-r border-border/50"
+                          >
+                            {isConverting ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Download className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                disabled={isConverting}
+                                className="rounded-l-none px-1.5"
                               >
-                                {AUDIO_FORMAT_LABELS[format]}
-                                {format === defaultFormat && (
-                                  <span className="ml-2 text-xs text-muted-foreground">
-                                    (デフォルト)
-                                  </span>
-                                )}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                                <ChevronDown className="h-3 w-3" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {supportedFormats.map((format) => (
+                                <DropdownMenuItem
+                                  key={format}
+                                  onClick={() => {
+                                    onDownload(recording.id, format);
+                                  }}
+                                >
+                                  {AUDIO_FORMAT_LABELS[format]}
+                                  {format === defaultFormat && (
+                                    <span className="ml-2 text-xs text-muted-foreground">
+                                      (デフォルト)
+                                    </span>
+                                  )}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                         <Button
                           variant="destructive"
                           size="sm"
