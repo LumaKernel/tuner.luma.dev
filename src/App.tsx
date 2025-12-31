@@ -7,7 +7,6 @@ import { PitchInfo } from "./components/PitchInfo";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { RecordingList } from "./components/RecordingList";
 import { StartOverlay } from "./components/StartOverlay";
-import { MicrophoneSelector } from "./components/MicrophoneSelector";
 import { VolumeLevel } from "./components/VolumeLevel";
 import { ModeToggle } from "./components/mode-toggle";
 import { ThemeProvider } from "./components/theme-provider";
@@ -171,15 +170,6 @@ function TunerApp() {
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <h1 className="text-xl font-bold tracking-tight">tuner.luma.dev</h1>
           <div className="flex items-center gap-2">
-            {isActive && (
-              <MicrophoneSelector
-                devices={devices}
-                selectedDeviceId={selectedDeviceId}
-                onDeviceChange={handleDeviceChange}
-                isLoading={isLoading}
-                compact
-              />
-            )}
             <Button variant="ghost" size="sm" onClick={handleOpenRecordings}>
               <ListMusic />
               録音一覧
@@ -242,6 +232,10 @@ function TunerApp() {
                 draft.recordingDuration = duration;
               });
             }}
+            devices={devices}
+            selectedDeviceId={selectedDeviceId}
+            onDeviceChange={handleDeviceChange}
+            isDevicesLoading={isLoading}
           />
         )}
       </main>

@@ -8,12 +8,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { MicrophoneSelector } from "./MicrophoneSelector";
+import type { AudioDevice } from "@/hooks/useMicrophoneDevices";
 
 type ControlPanelProps = {
   readonly onSave: () => void;
   readonly isSaving?: boolean;
   readonly recordingDuration: number;
   readonly onDurationChange: (duration: number) => void;
+  readonly devices: readonly AudioDevice[];
+  readonly selectedDeviceId: string;
+  readonly onDeviceChange: (deviceId: string) => void;
+  readonly isDevicesLoading: boolean;
 };
 
 type DurationOption = "30" | "60" | "120" | "custom";
@@ -42,6 +48,10 @@ export function ControlPanel({
   isSaving = false,
   recordingDuration,
   onDurationChange,
+  devices,
+  selectedDeviceId,
+  onDeviceChange,
+  isDevicesLoading,
 }: ControlPanelProps) {
   const [option, setOption] = useState<DurationOption>(() =>
     getDurationOption(recordingDuration),
@@ -96,45 +106,55 @@ export function ControlPanel({
 
   return (
     <div className="flex flex-col items-center gap-3">
-      <div className="flex items-center gap-2">
-        <Select value={option} onValueChange={handleOptionChange}>
-          <SelectTrigger className="w-24">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="30">30秒</SelectItem>
-            <SelectItem value="60">1分</SelectItem>
-            <SelectItem value="120">2分</SelectItem>
-            <SelectItem value="custom">カスタム</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="flex items-center gap-4 flex-wrap justify-center">
+        <MicrophoneSelector
+          devices={devices}
+          selectedDeviceId={selectedDeviceId}
+          onDeviceChange={onDeviceChange}
+          isLoading={isDevicesLoading}
+          compact
+        />
 
-        {option === "custom" && (
-          <div className="flex items-center gap-1">
-            <input
-              type="number"
-              min="0"
-              max="59"
-              value={customMinutes}
-              onChange={(e) => {
-                handleCustomMinutesChange(e.target.value);
-              }}
-              className="w-12 h-9 px-2 text-sm text-center rounded-md border border-input bg-transparent shadow-xs focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring"
-            />
-            <span className="text-sm text-muted-foreground">分</span>
-            <input
-              type="number"
-              min="0"
-              max="59"
-              value={customSeconds}
-              onChange={(e) => {
-                handleCustomSecondsChange(e.target.value);
-              }}
-              className="w-12 h-9 px-2 text-sm text-center rounded-md border border-input bg-transparent shadow-xs focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring"
-            />
-            <span className="text-sm text-muted-foreground">秒</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <Select value={option} onValueChange={handleOptionChange}>
+            <SelectTrigger className="w-24">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="30">30秒</SelectItem>
+              <SelectItem value="60">1分</SelectItem>
+              <SelectItem value="120">2分</SelectItem>
+              <SelectItem value="custom">カスタム</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {option === "custom" && (
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                min="0"
+                max="59"
+                value={customMinutes}
+                onChange={(e) => {
+                  handleCustomMinutesChange(e.target.value);
+                }}
+                className="w-12 h-9 px-2 text-sm text-center rounded-md border border-input bg-transparent shadow-xs focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring"
+              />
+              <span className="text-sm text-muted-foreground">分</span>
+              <input
+                type="number"
+                min="0"
+                max="59"
+                value={customSeconds}
+                onChange={(e) => {
+                  handleCustomSecondsChange(e.target.value);
+                }}
+                className="w-12 h-9 px-2 text-sm text-center rounded-md border border-input bg-transparent shadow-xs focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring"
+              />
+              <span className="text-sm text-muted-foreground">秒</span>
+            </div>
+          )}
+        </div>
       </div>
 
       <Button onClick={onSave} size="lg" disabled={isSaving}>
