@@ -1,5 +1,6 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { WritableDraft } from "immer";
+import { ChevronRight } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -16,7 +17,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 import { getSupportedFormats } from "@/utils/audioConverter";
+import { AdvancedSettingsDialog } from "@/components/AdvancedSettingsDialog";
 import {
   type Settings,
   type Notation,
@@ -40,6 +43,8 @@ export function SettingsDialog({
   settings,
   onSettingsChange,
 }: SettingsDialogProps) {
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
   const handleNotationChange = useCallback(
     (notation: Notation) => {
       onSettingsChange((draft) => {
@@ -170,8 +175,28 @@ export function SettingsDialog({
               ダウンロード時のデフォルト形式を指定します
             </p>
           </div>
+
+          {/* Advanced Settings Link */}
+          <div className="pt-2 border-t">
+            <Button
+              variant="ghost"
+              className="w-full justify-between"
+              onClick={() => setShowAdvanced(true)}
+            >
+              高度な設定
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </DialogContent>
+
+      {/* Advanced Settings Dialog */}
+      <AdvancedSettingsDialog
+        open={showAdvanced}
+        onClose={() => setShowAdvanced(false)}
+        settings={settings}
+        onSettingsChange={onSettingsChange}
+      />
     </Dialog>
   );
 }

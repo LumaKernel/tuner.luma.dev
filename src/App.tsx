@@ -64,7 +64,9 @@ function TunerApp() {
     currentPitch,
     pitchHistory,
     timestamp: pitchTimestamp,
-  } = usePitchDetection(audioData, sampleRate);
+  } = usePitchDetection(audioData, sampleRate, {
+    noiseGateThreshold: settings.state.advanced.noiseGateThreshold,
+  });
 
   const volumeLevel = useVolumeLevel(stereoData);
 
@@ -313,6 +315,7 @@ function TunerApp() {
               pitch={currentPitch}
               notation={settings.state.notation}
               accidental={settings.state.accidental}
+              advancedSettings={settings.state.advanced}
             />
             <VolumeLevel volume={volumeLevel} />
           </>

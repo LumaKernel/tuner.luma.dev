@@ -1,38 +1,63 @@
+import { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import type { PitchData, Notation, Accidental } from "@/types";
+import type {
+  PitchData,
+  Notation,
+  Accidental,
+  AdvancedSettings,
+} from "@/types";
 import {
   frequencyToCents,
   getNoteNameWithoutOctave,
   frequencyToOctave,
+  type TuningOptions,
 } from "@/lib/noteUtils";
 
 type PitchInfoProps = {
   readonly pitch: PitchData;
   readonly notation: Notation;
   readonly accidental: Accidental;
+  readonly advancedSettings: AdvancedSettings;
 };
 
-export function PitchInfo({ pitch, notation, accidental }: PitchInfoProps) {
+export function PitchInfo({
+  pitch,
+  notation,
+  accidental,
+  advancedSettings,
+}: PitchInfoProps) {
+  const tuningOptions: TuningOptions = useMemo(
+    () => ({
+      referenceFrequency: advancedSettings.referenceFrequency,
+      temperament: advancedSettings.temperament,
+      transposition: advancedSettings.transposition,
+    }),
+    [advancedSettings],
+  );
+
   const hasFrequency = pitch.frequency !== null;
   const frequency = pitch.frequency ?? 0;
-  const cents = hasFrequency ? frequencyToCents(frequency) : 0;
+  const cents = hasFrequency ? frequencyToCents(frequency, tuningOptions) : 0;
   const noteName = hasFrequency
-    ? getNoteNameWithoutOctave(frequency, notation, accidental)
+    ? getNoteNameWithoutOctave(frequency, notation, accidental, tuningOptions)
     : "--";
-  const octave = hasFrequency ? frequencyToOctave(frequency) : "";
+  const octave = hasFrequency
+    ? frequencyToOctave(frequency, tuningOptions)
+    : "";
 
+  const centThreshold = advancedSettings.centThreshold;
   const centsDisplay = cents >= 0 ? `+${cents}` : `${cents}`;
   const centsColor =
-    Math.abs(cents) < 5
+    Math.abs(cents) < centThreshold
       ? "text-green-500"
-      : Math.abs(cents) < 15
+      : Math.abs(cents) < centThreshold * 3
         ? "text-yellow-500"
         : "text-red-500";
 
   const meterColor =
-    Math.abs(cents) < 5
+    Math.abs(cents) < centThreshold
       ? "bg-green-500"
-      : Math.abs(cents) < 15
+      : Math.abs(cents) < centThreshold * 3
         ? "bg-yellow-500"
         : "bg-red-500";
 

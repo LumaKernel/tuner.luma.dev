@@ -117,10 +117,21 @@ type PitchDetectionResult = {
   readonly timestamp: number;
 };
 
+type PitchDetectionOptions = {
+  readonly noiseGateThreshold?: number;
+};
+
+const DEFAULT_OPTIONS: Required<PitchDetectionOptions> = {
+  noiseGateThreshold: 0.01,
+};
+
 export function usePitchDetection(
   audioData: Float32Array | null,
   sampleRate: number,
+  options?: PitchDetectionOptions,
 ): PitchDetectionResult {
+  const noiseGateThreshold =
+    options?.noiseGateThreshold ?? DEFAULT_OPTIONS.noiseGateThreshold;
   // State to hold filtered history - triggers re-renders when updated
   const [pitchHistory, setPitchHistory] = useState<
     readonly PitchHistoryEntry[]
@@ -145,7 +156,7 @@ export function usePitchDetection(
     const now = Date.now();
 
     const rms = getRMS(audioData);
-    if (rms >= 0.01) {
+    if (rms >= noiseGateThreshold) {
       const frequency = detectPitch(audioData, sampleRate);
       if (frequency > 0) {
         historyRef.current = [
@@ -168,7 +179,7 @@ export function usePitchDetection(
     // Update state to trigger re-render
     setPitchHistory(filtered);
     setLastTimestamp(now);
-  }, [audioData, sampleRate]);
+  }, [audioData, sampleRate, noiseGateThreshold]);
 
   // Derive current pitch from latest history entry (pure computation)
   const currentPitch = useMemo((): PitchData => {
