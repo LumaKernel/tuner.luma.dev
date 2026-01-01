@@ -21,6 +21,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Slider } from "@/components/ui/slider";
 import {
   type RecordingMeta,
   type AudioFormat,
@@ -215,8 +216,7 @@ export function RecordingList({
                       <span className="text-xs text-muted-foreground w-10 text-right">
                         {formatDuration(isPlaying ? playbackTime : 0)}
                       </span>
-                      <input
-                        type="range"
+                      <Slider
                         min={0}
                         max={
                           isPlaying && Number.isFinite(playbackDuration)
@@ -224,12 +224,12 @@ export function RecordingList({
                             : recording.duration
                         }
                         step={0.1}
-                        value={isPlaying ? playbackTime : 0}
-                        onChange={(e) => {
-                          onSeek(Number(e.target.value));
+                        value={[isPlaying ? playbackTime : 0]}
+                        onValueChange={([value]) => {
+                          onSeek(value);
                         }}
                         disabled={!isPlaying}
-                        className="flex-1 h-1.5 bg-secondary rounded-full appearance-none cursor-pointer accent-primary disabled:opacity-50 disabled:cursor-default [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary"
+                        className="flex-1"
                       />
                       <span className="text-xs text-muted-foreground w-10">
                         {formatDuration(
