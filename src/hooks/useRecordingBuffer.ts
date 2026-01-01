@@ -1,44 +1,57 @@
 import { useRef, useCallback, useEffect } from "react";
 import { get, set } from "idb-keyval";
-import type { Recording, PitchHistoryEntry, AudioFormat } from "@/types";
-import { AUDIO_FORMAT_MIME_TYPES } from "@/types";
+import type { Recording, PitchHistoryEntry } from "@/types";
 
 const EXPIRATION_DAYS = 7;
-const CHUNK_INTERVAL_MS = 1000; // Request data every 1 second
 
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
-// Priority order for auto codec selection
-const CODEC_PRIORITY: readonly string[] = [
-  "audio/webm;codecs=opus",
-  "audio/webm",
-  "audio/ogg;codecs=opus",
-  "audio/mp4",
-];
+// Convert Float32Array samples to WAV Blob
+function samplesToWav(samples: Float32Array, sampleRate: number): Blob {
+  const numChannels = 1;
+  const bitsPerSample = 16;
+  const bytesPerSample = bitsPerSample / 8;
+  const blockAlign = numChannels * bytesPerSample;
+  const byteRate = sampleRate * blockAlign;
+  const dataSize = samples.length * bytesPerSample;
+  const bufferSize = 44 + dataSize;
 
-// Get the best supported MIME type for MediaRecorder
-// Note: MediaRecorder only supports native browser formats, not wav/mp3
-function getBestMimeType(): string {
-  for (const type of CODEC_PRIORITY) {
-    if (MediaRecorder.isTypeSupported(type)) {
-      return type;
+  const arrayBuffer = new ArrayBuffer(bufferSize);
+  const view = new DataView(arrayBuffer);
+
+  const writeString = (offset: number, str: string) => {
+    for (let i = 0; i < str.length; i++) {
+      view.setUint8(offset + i, str.charCodeAt(i));
     }
-  }
-  return "";
-}
+  };
 
-// Get MIME type for format (for native formats only)
-function getMimeTypeForFormat(format: AudioFormat): string | null {
-  if (format === "auto" || format === "wav" || format === "mp3") {
-    return null; // Use auto-selection
+  // WAV header
+  writeString(0, "RIFF");
+  view.setUint32(4, bufferSize - 8, true);
+  writeString(8, "WAVE");
+  writeString(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitsPerSample, true);
+  writeString(36, "data");
+  view.setUint32(40, dataSize, true);
+
+  // Write audio data
+  let offset = 44;
+  for (const sample of samples) {
+    const clampedSample = Math.max(-1, Math.min(1, sample));
+    const intSample = clampedSample < 0 ? clampedSample * 0x8000 : clampedSample * 0x7fff;
+    view.setInt16(offset, intSample, true);
+    offset += 2;
   }
-  const mimeType = AUDIO_FORMAT_MIME_TYPES[format];
-  if (mimeType && MediaRecorder.isTypeSupported(mimeType)) {
-    return mimeType;
-  }
-  return null; // Fallback to auto
+
+  return new Blob([arrayBuffer], { type: "audio/wav" });
 }
 
 type RecordingBufferResult = {
@@ -48,94 +61,128 @@ type RecordingBufferResult = {
 export function useRecordingBuffer(
   stream: MediaStream | null,
   bufferDurationSeconds: number,
-  _audioFormat: AudioFormat = "auto", // Format preference (used for download, not recording)
 ): RecordingBufferResult {
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const chunkTimestampsRef = useRef<number[]>([]);
-  const mimeTypeRef = useRef<string>("");
+  // Web Audio API refs for PCM capture
+  // Note: ScriptProcessorNode is deprecated but AudioWorkletNode requires a separate
+  // worker file. For simplicity, we use ScriptProcessorNode for now.
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
+  const processorRef = useRef<ScriptProcessorNode | null>(null);
+
+  // Ring buffer of PCM samples
+  const ringBufferRef = useRef<Float32Array[]>([]);
+  const totalSamplesRef = useRef<number>(0);
+  const sampleRateRef = useRef<number>(44100);
+  const maxSamplesRef = useRef<number>(0);
+
   const pitchHistoryRef = useRef<readonly PitchHistoryEntry[]>([]);
 
-  // Setup MediaRecorder when stream changes
-  // Always use best browser-supported format for recording
+  // Setup Web Audio API capture when stream changes
   useEffect(() => {
     if (!stream) {
       // Cleanup when stream is removed
-      if (mediaRecorderRef.current) {
-        mediaRecorderRef.current.stop();
-        mediaRecorderRef.current = null;
+      if (processorRef.current) {
+        processorRef.current.disconnect();
+        processorRef.current = null;
       }
-      chunksRef.current = [];
-      chunkTimestampsRef.current = [];
+      if (sourceRef.current) {
+        sourceRef.current.disconnect();
+        sourceRef.current = null;
+      }
+      if (audioContextRef.current) {
+        void audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
+      ringBufferRef.current = [];
+      totalSamplesRef.current = 0;
       return;
     }
 
-    // Try to use format-specific MIME type, fallback to best available
-    const mimeType = getMimeTypeForFormat(_audioFormat) ?? getBestMimeType();
-    if (!mimeType) {
-      console.error("No supported audio MIME type found");
-      return;
-    }
-    mimeTypeRef.current = mimeType;
+    const audioContext = new AudioContext();
+    audioContextRef.current = audioContext;
+    sampleRateRef.current = audioContext.sampleRate;
+    maxSamplesRef.current = bufferDurationSeconds * audioContext.sampleRate;
 
-    const recorder = new MediaRecorder(stream, { mimeType });
-    mediaRecorderRef.current = recorder;
+    const source = audioContext.createMediaStreamSource(stream);
+    sourceRef.current = source;
 
-    recorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        chunksRef.current.push(event.data);
-        chunkTimestampsRef.current.push(Date.now());
+    // ScriptProcessorNode is deprecated but AudioWorkletNode requires more setup
+    // Using 4096 buffer size for balance between latency and performance
+    const bufferSize = 4096;
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
+    const processor = audioContext.createScriptProcessor(bufferSize, 1, 1);
+    processorRef.current = processor;
 
-        // Trim old chunks to maintain buffer duration
-        // IMPORTANT: Keep the first chunk as it contains the container header (webm/ogg/mp4)
-        // Without the header, the resulting blob cannot be decoded
-        const now = Date.now();
-        const cutoffTime = now - bufferDurationSeconds * 1000;
-        while (
-          chunkTimestampsRef.current.length > 1 && // Keep at least 1 chunk (header)
-          chunkTimestampsRef.current[1] < cutoffTime // Check second chunk, not first
-        ) {
-          // Remove the second chunk, keeping the first (header) intact
-          chunksRef.current.splice(1, 1);
-          chunkTimestampsRef.current.splice(1, 1);
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
+    processor.onaudioprocess = (e) => {
+      // eslint-disable-next-line @typescript-eslint/no-deprecated
+      const inputData = e.inputBuffer.getChannelData(0);
+      // Copy the data (inputData is reused by the browser)
+      const copy = new Float32Array(inputData.length);
+      copy.set(inputData);
+
+      ringBufferRef.current.push(copy);
+      totalSamplesRef.current += copy.length;
+
+      // Trim old samples to maintain buffer duration
+      while (
+        totalSamplesRef.current > maxSamplesRef.current &&
+        ringBufferRef.current.length > 0
+      ) {
+        const removed = ringBufferRef.current.shift();
+        if (removed) {
+          totalSamplesRef.current -= removed.length;
         }
       }
     };
 
-    recorder.start(CHUNK_INTERVAL_MS);
+    source.connect(processor);
+    // Connect to destination (required for ScriptProcessorNode to work)
+    // Use a gain node with 0 volume to prevent audio feedback
+    const silentGain = audioContext.createGain();
+    silentGain.gain.value = 0;
+    processor.connect(silentGain);
+    silentGain.connect(audioContext.destination);
 
     return () => {
-      if (recorder.state !== "inactive") {
-        recorder.stop();
-      }
+      processor.disconnect();
+      silentGain.disconnect();
+      source.disconnect();
+      void audioContext.close();
     };
-  }, [stream, bufferDurationSeconds, _audioFormat]);
+  }, [stream, bufferDurationSeconds]);
 
   const saveRecording = useCallback(async (): Promise<string | null> => {
-    if (chunksRef.current.length === 0) {
+    const chunks = ringBufferRef.current;
+    if (chunks.length === 0) {
       return null;
     }
 
-    // Create a blob from all chunks
-    const audioBlob = new Blob(chunksRef.current, {
-      type: mimeTypeRef.current,
-    });
+    // Concatenate all samples from ring buffer
+    const totalLength = chunks.reduce((acc, arr) => acc + arr.length, 0);
+    const combined = new Float32Array(totalLength);
+    let offset = 0;
+    for (const arr of chunks) {
+      combined.set(arr, offset);
+      offset += arr.length;
+    }
+
+    // Create WAV blob
+    const audioBlob = samplesToWav(combined, sampleRateRef.current);
 
     const now = Date.now();
     const id = generateId();
 
-    // Calculate duration from timestamps
-    // Cap at bufferDurationSeconds since we trim old chunks beyond that
-    const firstTimestamp = chunkTimestampsRef.current[0] ?? now;
-    const elapsedTime = (now - firstTimestamp) / 1000;
-    const duration = Math.min(elapsedTime, bufferDurationSeconds);
+    // Calculate actual duration from samples
+    const duration = totalLength / sampleRateRef.current;
 
     const recording: Recording = {
       id,
       createdAt: now,
       expiresAt: now + EXPIRATION_DAYS * 24 * 60 * 60 * 1000,
       duration,
-      mimeType: mimeTypeRef.current,
+      mimeType: "audio/wav",
       audioBlob,
       pitchData: pitchHistoryRef.current,
     };
@@ -155,7 +202,7 @@ export function useRecordingBuffer(
       console.error("Failed to save recording:", error);
       return null;
     }
-  }, [bufferDurationSeconds]);
+  }, []);
 
   return { saveRecording };
 }

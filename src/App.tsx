@@ -65,7 +65,6 @@ function TunerApp() {
   const { saveRecording } = useRecordingBuffer(
     stream,
     settings.state.recordingDuration,
-    settings.state.audioFormat,
   );
 
   const {
