@@ -329,7 +329,7 @@ function TunerApp() {
             <StartOverlay
               devices={devices}
               selectedDeviceId={selectedDeviceId}
-              onDeviceChange={setSelectedDeviceId}
+              onDeviceChange={handleDeviceChange}
               isLoading={isLoading}
               error={error}
               onRefreshDevices={refreshDevices}
