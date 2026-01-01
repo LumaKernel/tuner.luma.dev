@@ -18,12 +18,44 @@ const defaultSettings: Settings = {
   audioFormat: "wav",
 };
 
+// Validate and sanitize loaded settings
+function sanitizeSettings(parsed: unknown): Settings {
+  if (typeof parsed !== "object" || parsed === null) {
+    return defaultSettings;
+  }
+
+  const obj = parsed as Record<string, unknown>;
+
+  return {
+    notation:
+      obj.notation === "letter" || obj.notation === "solfege"
+        ? obj.notation
+        : defaultSettings.notation,
+    accidental:
+      obj.accidental === "sharp" || obj.accidental === "flat"
+        ? obj.accidental
+        : defaultSettings.accidental,
+    recordingDuration:
+      typeof obj.recordingDuration === "number" && obj.recordingDuration > 0
+        ? obj.recordingDuration
+        : defaultSettings.recordingDuration,
+    autoStart:
+      typeof obj.autoStart === "boolean"
+        ? obj.autoStart
+        : defaultSettings.autoStart,
+    audioFormat:
+      obj.audioFormat === "wav" || obj.audioFormat === "mp3"
+        ? obj.audioFormat
+        : defaultSettings.audioFormat,
+  };
+}
+
 function loadSettings(): Settings {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      const parsed = JSON.parse(stored) as Partial<Settings>;
-      return { ...defaultSettings, ...parsed };
+      const parsed: unknown = JSON.parse(stored);
+      return sanitizeSettings(parsed);
     }
   } catch {
     // Ignore parse errors
