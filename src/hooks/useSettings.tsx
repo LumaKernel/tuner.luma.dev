@@ -15,7 +15,7 @@ const defaultSettings: Settings = {
   accidental: "sharp",
   recordingDuration: 30,
   autoStart: false,
-  audioFormat: "auto",
+  audioFormat: "wav",
 };
 
 function loadSettings(): Settings {

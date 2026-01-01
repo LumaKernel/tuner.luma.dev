@@ -152,7 +152,7 @@ export function useRecordingStorage(): RecordingStorageResult {
   );
 
   const downloadRecording = useCallback(
-    async (id: string, format: AudioFormat = "auto"): Promise<void> => {
+    async (id: string, format: AudioFormat = "wav"): Promise<void> => {
       try {
         const recording = await get<Recording>(`recording-${id}`);
         if (!recording) return;

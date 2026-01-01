@@ -1,8 +1,4 @@
-import {
-  type AudioFormat,
-  AUDIO_FORMAT_EXTENSIONS,
-  AUDIO_FORMAT_MIME_TYPES,
-} from "@/types";
+import { type AudioFormat, AUDIO_FORMAT_EXTENSIONS } from "@/types";
 
 // Decode audio blob to AudioBuffer
 async function decodeAudioBlob(blob: Blob): Promise<AudioBuffer> {
@@ -123,90 +119,35 @@ async function audioBufferToMp3(buffer: AudioBuffer): Promise<Blob> {
   return new Blob(mp3Data, { type: "audio/mp3" });
 }
 
-// Check if format requires conversion (not directly supported by MediaRecorder)
-function requiresConversion(format: AudioFormat): boolean {
-  return format === "wav" || format === "mp3";
-}
-
-// Get extension from blob's MIME type
-function getExtensionFromMimeType(mimeType: string): string {
-  if (mimeType.includes("webm")) return "webm";
-  if (mimeType.includes("ogg")) return "ogg";
-  if (mimeType.includes("mp4")) return "m4a";
-  if (mimeType.includes("wav")) return "wav";
-  if (mimeType.includes("mp3") || mimeType.includes("mpeg")) return "mp3";
-  return "audio";
-}
-
 // Convert audio blob to specified format
 export async function convertAudioBlob(
   blob: Blob,
   format: AudioFormat,
 ): Promise<{ readonly blob: Blob; readonly extension: string }> {
-  // For "auto" or native formats that match the blob, return as-is
-  if (format === "auto" || !requiresConversion(format)) {
-    // Check if the format matches the blob's type
-    const mimeType = AUDIO_FORMAT_MIME_TYPES[format];
-    if (
-      format === "auto" ||
-      blob.type === mimeType ||
-      blob.type.includes(format.replace("-opus", ""))
-    ) {
-      return {
-        blob,
-        extension: getExtensionFromMimeType(blob.type),
-      };
-    }
-    // For native formats that don't match, still return original
-    // (conversion between native formats not supported)
-    return {
-      blob,
-      extension: getExtensionFromMimeType(blob.type),
-    };
-  }
-
-  // Decode the original audio for conversion
-  const audioBuffer = await decodeAudioBlob(blob);
-
+  // WAV: return as-is if already WAV, otherwise decode and convert
   if (format === "wav") {
+    if (blob.type === "audio/wav") {
+      return { blob, extension: AUDIO_FORMAT_EXTENSIONS.wav };
+    }
+    const audioBuffer = await decodeAudioBlob(blob);
     return {
       blob: audioBufferToWav(audioBuffer),
       extension: AUDIO_FORMAT_EXTENSIONS.wav,
     };
   }
 
-  if (format === "mp3") {
-    return {
-      blob: await audioBufferToMp3(audioBuffer),
-      extension: AUDIO_FORMAT_EXTENSIONS.mp3,
-    };
-  }
-
-  // Fallback
-  return { blob, extension: getExtensionFromMimeType(blob.type) };
+  // MP3: always decode and encode
+  const audioBuffer = await decodeAudioBlob(blob);
+  return {
+    blob: await audioBufferToMp3(audioBuffer),
+    extension: AUDIO_FORMAT_EXTENSIONS.mp3,
+  };
 }
 
-// Get list of supported formats for the current browser
+// Get list of supported formats for download
+// Note: Recording is always saved as WAV internally.
+// Only WAV and MP3 are available for download conversion.
 export function getSupportedFormats(): readonly AudioFormat[] {
-  const formats: AudioFormat[] = ["auto"];
-
-  // Check MediaRecorder support for native formats
-  const nativeFormats: readonly AudioFormat[] = [
-    "webm-opus",
-    "webm",
-    "ogg-opus",
-    "mp4",
-  ];
-
-  for (const format of nativeFormats) {
-    const mimeType = AUDIO_FORMAT_MIME_TYPES[format];
-    if (mimeType && MediaRecorder.isTypeSupported(mimeType)) {
-      formats.push(format);
-    }
-  }
-
-  // WAV and MP3 are always available (converted from any format)
-  formats.push("wav", "mp3");
-
-  return formats;
+  // WAV is the native format, MP3 is converted via lamejs
+  return ["wav", "mp3"] as const;
 }

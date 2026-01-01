@@ -1,41 +1,17 @@
 export type Notation = "letter" | "solfege";
 export type Accidental = "sharp" | "flat";
 
-// Unified audio format for both recording and download
-export type AudioFormat =
-  | "auto" // Browser's best supported format
-  | "webm-opus" // audio/webm;codecs=opus
-  | "webm" // audio/webm
-  | "ogg-opus" // audio/ogg;codecs=opus
-  | "mp4" // audio/mp4
-  | "wav" // Converted from recording
-  | "mp3"; // Converted from recording
+// Download audio format
+// Note: Recording is always saved as WAV internally.
+export type AudioFormat = "wav" | "mp3";
 
 export const AUDIO_FORMAT_LABELS: Record<AudioFormat, string> = {
-  auto: "自動（ブラウザ推奨形式）",
-  "webm-opus": "WebM (Opus)",
-  webm: "WebM",
-  "ogg-opus": "Ogg (Opus)",
-  mp4: "MP4 (AAC)",
   wav: "WAV（無圧縮）",
   mp3: "MP3",
 };
 
-// Map AudioFormat to MIME type (for MediaRecorder)
-export const AUDIO_FORMAT_MIME_TYPES: Partial<Record<AudioFormat, string>> = {
-  "webm-opus": "audio/webm;codecs=opus",
-  webm: "audio/webm",
-  "ogg-opus": "audio/ogg;codecs=opus",
-  mp4: "audio/mp4",
-};
-
 // File extensions for each format
 export const AUDIO_FORMAT_EXTENSIONS: Record<AudioFormat, string> = {
-  auto: "webm",
-  "webm-opus": "webm",
-  webm: "webm",
-  "ogg-opus": "ogg",
-  mp4: "m4a",
   wav: "wav",
   mp3: "mp3",
 };
