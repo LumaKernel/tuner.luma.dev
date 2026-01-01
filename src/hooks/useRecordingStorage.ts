@@ -24,17 +24,6 @@ type RecordingStorageResult = {
   readonly playbackDuration: number;
 };
 
-// Decode audio blob to AudioBuffer
-async function decodeAudioBlob(blob: Blob): Promise<AudioBuffer> {
-  const arrayBuffer = await blob.arrayBuffer();
-  const audioContext = new AudioContext();
-  try {
-    return await audioContext.decodeAudioData(arrayBuffer);
-  } finally {
-    await audioContext.close();
-  }
-}
-
 export function useRecordingStorage(): RecordingStorageResult {
   const [recordings, setRecordings] = useState<readonly RecordingMeta[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -43,12 +32,9 @@ export function useRecordingStorage(): RecordingStorageResult {
   const [playbackTime, setPlaybackTime] = useState(0);
   const [playbackDuration, setPlaybackDuration] = useState(0);
 
-  // AudioContext-based playback refs
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const sourceNodeRef = useRef<AudioBufferSourceNode | null>(null);
-  const audioBufferRef = useRef<AudioBuffer | null>(null);
-  const startTimeRef = useRef<number>(0); // AudioContext time when playback started
-  const startOffsetRef = useRef<number>(0); // Offset in seconds when playback started
+  // HTML5 Audio-based playback refs
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const objectUrlRef = useRef<string | null>(null);
   const animationFrameRef = useRef<number | null>(null);
 
   const cleanupPlayback = useCallback(() => {
@@ -56,22 +42,15 @@ export function useRecordingStorage(): RecordingStorageResult {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
     }
-    if (sourceNodeRef.current) {
-      try {
-        sourceNodeRef.current.stop();
-      } catch {
-        // Already stopped
-      }
-      sourceNodeRef.current.disconnect();
-      sourceNodeRef.current = null;
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+      audioRef.current = null;
     }
-    if (audioContextRef.current) {
-      void audioContextRef.current.close();
-      audioContextRef.current = null;
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
     }
-    audioBufferRef.current = null;
-    startTimeRef.current = 0;
-    startOffsetRef.current = 0;
     setPlayingId(null);
     setPlaybackTime(0);
     setPlaybackDuration(0);
@@ -202,65 +181,6 @@ export function useRecordingStorage(): RecordingStorageResult {
     [],
   );
 
-  // Start playback from a specific offset using AudioBufferSourceNode
-  const startPlaybackFromOffset = useCallback(
-    (audioBuffer: AudioBuffer, offset: number) => {
-      if (!audioContextRef.current) return;
-
-      // Stop existing source if any
-      if (sourceNodeRef.current) {
-        try {
-          sourceNodeRef.current.stop();
-        } catch {
-          // Already stopped
-        }
-        sourceNodeRef.current.disconnect();
-      }
-
-      const source = audioContextRef.current.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(audioContextRef.current.destination);
-      sourceNodeRef.current = source;
-
-      // Track when playback started
-      startTimeRef.current = audioContextRef.current.currentTime;
-      startOffsetRef.current = offset;
-
-      source.onended = () => {
-        // Only cleanup if playback finished naturally (not stopped/seeked)
-        const currentTime =
-          startOffsetRef.current +
-          ((audioContextRef.current?.currentTime ?? 0) - startTimeRef.current);
-        if (currentTime >= audioBuffer.duration - 0.1) {
-          cleanupPlayback();
-        }
-      };
-
-      // Start playback from offset
-      source.start(0, offset);
-
-      // Update playback time using requestAnimationFrame
-      const updateTime = () => {
-        if (!audioContextRef.current || !audioBufferRef.current) return;
-
-        const currentTime =
-          startOffsetRef.current +
-          (audioContextRef.current.currentTime - startTimeRef.current);
-        const clampedTime = Math.min(
-          currentTime,
-          audioBufferRef.current.duration,
-        );
-        setPlaybackTime(clampedTime);
-
-        if (clampedTime < audioBufferRef.current.duration) {
-          animationFrameRef.current = requestAnimationFrame(updateTime);
-        }
-      };
-      animationFrameRef.current = requestAnimationFrame(updateTime);
-    },
-    [cleanupPlayback],
-  );
-
   const playRecording = useCallback(
     async (id: string): Promise<void> => {
       try {
@@ -270,53 +190,67 @@ export function useRecordingStorage(): RecordingStorageResult {
         const recording = await get<Recording>(`recording-${id}`);
         if (!recording) return;
 
-        // Decode audio blob to AudioBuffer
-        const audioBuffer = await decodeAudioBlob(recording.audioBlob);
-        audioBufferRef.current = audioBuffer;
+        // Create object URL from blob
+        const url = URL.createObjectURL(recording.audioBlob);
+        objectUrlRef.current = url;
 
-        // Create AudioContext for playback
-        const audioContext = new AudioContext();
-        audioContextRef.current = audioContext;
+        // Create HTML5 Audio element for playback
+        // This is more robust than decodeAudioData for WebM/Opus formats
+        const audio = new Audio(url);
+        audioRef.current = audio;
+
+        // Wait for metadata to load to get duration
+        await new Promise<void>((resolve, reject) => {
+          audio.onloadedmetadata = () => {
+            setPlaybackDuration(audio.duration);
+            resolve();
+          };
+          audio.onerror = () => {
+            reject(new Error("Failed to load audio"));
+          };
+        });
 
         setPlayingId(id);
-        setPlaybackDuration(audioBuffer.duration);
 
-        // Start playback from beginning
-        startPlaybackFromOffset(audioBuffer, 0);
+        // Handle playback end
+        audio.onended = () => {
+          cleanupPlayback();
+        };
+
+        // Start playback
+        await audio.play();
+
+        // Update playback time using requestAnimationFrame
+        const updateTime = () => {
+          if (!audioRef.current) return;
+
+          setPlaybackTime(audioRef.current.currentTime);
+
+          if (!audioRef.current.paused && !audioRef.current.ended) {
+            animationFrameRef.current = requestAnimationFrame(updateTime);
+          }
+        };
+        animationFrameRef.current = requestAnimationFrame(updateTime);
       } catch (error) {
         console.error("Failed to play recording:", error);
         cleanupPlayback();
       }
     },
-    [cleanupPlayback, startPlaybackFromOffset],
+    [cleanupPlayback],
   );
 
   const stopPlayback = useCallback(() => {
     cleanupPlayback();
   }, [cleanupPlayback]);
 
-  const seek = useCallback(
-    (time: number) => {
-      if (!audioContextRef.current || !audioBufferRef.current) return;
+  const seek = useCallback((time: number) => {
+    if (!audioRef.current) return;
 
-      // Cancel current animation frame
-      if (animationFrameRef.current !== null) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
-
-      // Clamp time to valid range
-      const clampedTime = Math.max(
-        0,
-        Math.min(time, audioBufferRef.current.duration),
-      );
-
-      // Restart playback from new position
-      startPlaybackFromOffset(audioBufferRef.current, clampedTime);
-      setPlaybackTime(clampedTime);
-    },
-    [startPlaybackFromOffset],
-  );
+    // Clamp time to valid range
+    const clampedTime = Math.max(0, Math.min(time, audioRef.current.duration));
+    audioRef.current.currentTime = clampedTime;
+    setPlaybackTime(clampedTime);
+  }, []);
 
   return {
     recordings,
