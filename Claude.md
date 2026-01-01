@@ -1,2 +1,3 @@
 - Immutable指向。readonlyを必ず付ける。immerを利用。
 - コンポーネントを適切に区切る。まずは大きく全体を作って、そのあとに分割する。
+- 作業が完了したら必ず、 typecheck/lint-fix/clippy/test を実施する。

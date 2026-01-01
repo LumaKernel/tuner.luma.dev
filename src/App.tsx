@@ -41,6 +41,11 @@ import { useRecordingBuffer } from "./hooks/useRecordingBuffer";
 import { useRecordingStorage } from "./hooks/useRecordingStorage";
 import { useMicrophoneDevices } from "./hooks/useMicrophoneDevices";
 import { useSettings, SettingsProvider } from "./hooks/useSettings";
+import {
+  useMicSelectionState,
+  MicSelectionStateProvider,
+} from "./hooks/useMicSelectionState";
+import { selectMicrophone, recordMicSelection } from "./lib/micAutoSelect";
 
 function TunerApp() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -49,6 +54,7 @@ function TunerApp() {
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const settings = useSettings();
+  const micSelection = useMicSelectionState();
 
   const { devices, isLoading, error, refreshDevices } = useMicrophoneDevices();
   const { isActive, startAudio, audioData, stereoData, sampleRate, stream } =
@@ -84,25 +90,49 @@ function TunerApp() {
   // Track if we've initialized device selection
   const initializedRef = useRef(false);
 
-  // Select first device when devices are loaded
+  // Get available device IDs for auto-selection
+  const availableDeviceIds = devices.map((d) => d.deviceId);
+
+  // Select device using auto-selection logic when devices are loaded
   if (
     devices.length > 0 &&
     selectedDeviceId === "" &&
     !initializedRef.current
   ) {
     initializedRef.current = true;
-    setSelectedDeviceId(devices[0].deviceId);
+    const autoSelected = selectMicrophone(
+      availableDeviceIds,
+      micSelection.state,
+      devices[0]?.deviceId ?? null,
+    );
+    if (autoSelected !== null) {
+      setSelectedDeviceId(autoSelected);
+    }
   }
 
   // Handle device change while active - restart audio with new device
+  // This is for explicit user selection, so record it
   const handleDeviceChange = useCallback(
     (deviceId: string) => {
       setSelectedDeviceId(deviceId);
+      // Record explicit selection
+      micSelection.update((draft) => {
+        const newState = recordMicSelection(
+          {
+            environmentSelections: draft.environmentSelections,
+            recentSelections: [...draft.recentSelections],
+          },
+          availableDeviceIds,
+          deviceId,
+        );
+        draft.environmentSelections = newState.environmentSelections;
+        draft.recentSelections = newState.recentSelections as string[];
+      });
       if (isActive) {
         void startAudio(deviceId);
       }
     },
-    [isActive, startAudio],
+    [isActive, startAudio, micSelection, availableDeviceIds],
   );
 
   const handleSave = useCallback(async () => {
@@ -362,8 +392,10 @@ export function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="tuner-ui-theme">
       <SettingsProvider>
-        <TunerApp />
-        <Toaster position="bottom-center" />
+        <MicSelectionStateProvider>
+          <TunerApp />
+          <Toaster position="bottom-center" />
+        </MicSelectionStateProvider>
       </SettingsProvider>
     </ThemeProvider>
   );
