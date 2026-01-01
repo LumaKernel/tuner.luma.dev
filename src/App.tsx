@@ -370,6 +370,7 @@ function TunerApp() {
       <RecordingList
         open={isRecordingsOpen}
         onClose={() => {
+          stopPlayback();
           setIsRecordingsOpen(false);
         }}
         recordings={recordings}
