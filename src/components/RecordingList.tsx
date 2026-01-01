@@ -54,6 +54,10 @@ function formatDate(timestamp: number): string {
 }
 
 function formatDuration(seconds: number): string {
+  // Handle Infinity/NaN (WebM from MediaRecorder often lacks duration metadata)
+  if (!Number.isFinite(seconds) || seconds < 0) {
+    return "0:00";
+  }
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins}:${secs.toString().padStart(2, "0")}`;
@@ -215,7 +219,7 @@ export function RecordingList({
                         type="range"
                         min={0}
                         max={
-                          isPlaying && playbackDuration > 0
+                          isPlaying && Number.isFinite(playbackDuration)
                             ? playbackDuration
                             : recording.duration
                         }
@@ -229,7 +233,7 @@ export function RecordingList({
                       />
                       <span className="text-xs text-muted-foreground w-10">
                         {formatDuration(
-                          isPlaying && playbackDuration > 0
+                          isPlaying && Number.isFinite(playbackDuration)
                             ? playbackDuration
                             : recording.duration,
                         )}

@@ -200,9 +200,15 @@ export function useRecordingStorage(): RecordingStorageResult {
         audioRef.current = audio;
 
         // Wait for metadata to load to get duration
+        // Note: WebM from MediaRecorder often has Infinity duration in metadata,
+        // so we use the stored duration as fallback
+        const storedDuration = recording.duration;
         await new Promise<void>((resolve, reject) => {
           audio.onloadedmetadata = () => {
-            setPlaybackDuration(audio.duration);
+            const duration = Number.isFinite(audio.duration)
+              ? audio.duration
+              : storedDuration;
+            setPlaybackDuration(duration);
             resolve();
           };
           audio.onerror = () => {
