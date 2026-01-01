@@ -87,14 +87,17 @@ export function useRecordingBuffer(
         chunkTimestampsRef.current.push(Date.now());
 
         // Trim old chunks to maintain buffer duration
+        // IMPORTANT: Keep the first chunk as it contains the container header (webm/ogg/mp4)
+        // Without the header, the resulting blob cannot be decoded
         const now = Date.now();
         const cutoffTime = now - bufferDurationSeconds * 1000;
         while (
-          chunkTimestampsRef.current.length > 0 &&
-          chunkTimestampsRef.current[0] < cutoffTime
+          chunkTimestampsRef.current.length > 1 && // Keep at least 1 chunk (header)
+          chunkTimestampsRef.current[1] < cutoffTime // Check second chunk, not first
         ) {
-          chunksRef.current.shift();
-          chunkTimestampsRef.current.shift();
+          // Remove the second chunk, keeping the first (header) intact
+          chunksRef.current.splice(1, 1);
+          chunkTimestampsRef.current.splice(1, 1);
         }
       }
     };
