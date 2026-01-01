@@ -46,7 +46,8 @@ function samplesToWav(samples: Float32Array, sampleRate: number): Blob {
   let offset = 44;
   for (const sample of samples) {
     const clampedSample = Math.max(-1, Math.min(1, sample));
-    const intSample = clampedSample < 0 ? clampedSample * 0x8000 : clampedSample * 0x7fff;
+    const intSample =
+      clampedSample < 0 ? clampedSample * 0x8000 : clampedSample * 0x7fff;
     view.setInt16(offset, intSample, true);
     offset += 2;
   }
