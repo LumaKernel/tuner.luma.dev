@@ -125,8 +125,10 @@ export function useRecordingBuffer(
     const id = generateId();
 
     // Calculate duration from timestamps
+    // Cap at bufferDurationSeconds since we trim old chunks beyond that
     const firstTimestamp = chunkTimestampsRef.current[0] ?? now;
-    const duration = (now - firstTimestamp) / 1000;
+    const elapsedTime = (now - firstTimestamp) / 1000;
+    const duration = Math.min(elapsedTime, bufferDurationSeconds);
 
     const recording: Recording = {
       id,
@@ -153,7 +155,7 @@ export function useRecordingBuffer(
       console.error("Failed to save recording:", error);
       return null;
     }
-  }, []);
+  }, [bufferDurationSeconds]);
 
   return { saveRecording };
 }
