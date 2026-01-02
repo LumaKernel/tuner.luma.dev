@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { ListMusic, Menu, Settings } from "lucide-react";
 import { toast } from "sonner";
 
@@ -94,7 +94,10 @@ function TunerApp() {
   const initializedRef = useRef(false);
 
   // Get available device IDs for auto-selection
-  const availableDeviceIds = devices.map((d) => d.deviceId);
+  const availableDeviceIds = useMemo(
+    () => devices.map((d) => d.deviceId),
+    [devices],
+  );
 
   // Select device using auto-selection logic when devices are loaded
   if (
@@ -191,6 +194,15 @@ function TunerApp() {
     (autoStart: boolean) => {
       settings.update((draft) => {
         draft.autoStart = autoStart;
+      });
+    },
+    [settings],
+  );
+
+  const handleDurationChange = useCallback(
+    (duration: number) => {
+      settings.update((draft) => {
+        draft.recordingDuration = duration;
       });
     },
     [settings],
@@ -350,11 +362,7 @@ function TunerApp() {
               onSave={handleSave}
               isSaving={isSaving}
               recordingDuration={settings.state.recordingDuration}
-              onDurationChange={(duration) => {
-                settings.update((draft) => {
-                  draft.recordingDuration = duration;
-                });
-              }}
+              onDurationChange={handleDurationChange}
               devices={devices}
               selectedDeviceId={selectedDeviceId}
               onDeviceChange={handleDeviceChange}

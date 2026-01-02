@@ -3,6 +3,7 @@ import {
   useContext,
   useState,
   useCallback,
+  useMemo,
   type ReactNode,
 } from "react";
 import { produce, type WritableDraft } from "immer";
@@ -154,7 +155,10 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     [],
   );
 
-  const value: SettingsContextValue = { state, update };
+  const value: SettingsContextValue = useMemo(
+    () => ({ state, update }),
+    [state, update],
+  );
 
   return (
     <SettingsContext.Provider value={value}>

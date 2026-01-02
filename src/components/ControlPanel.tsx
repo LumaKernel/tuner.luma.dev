@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,7 +43,7 @@ function getDurationOption(duration: number): DurationOption {
   return "custom";
 }
 
-export function ControlPanel({
+export const ControlPanel = memo(function ControlPanel({
   onSave,
   isSaving = false,
   recordingDuration,
@@ -148,4 +148,4 @@ export function ControlPanel({
       </Button>
     </div>
   );
-}
+});

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, memo } from "react";
 import {
   Volume2,
   Play,
@@ -47,7 +47,7 @@ const DEFAULT_REFERENCE_VOLUME = 0.3;
 const DEFAULT_METRONOME_VOLUME = 0.5;
 const DEFAULT_BPM = 120;
 
-export function AudioToolsPanel({
+export const AudioToolsPanel = memo(function AudioToolsPanel({
   notation,
   accidental,
   advancedSettings,
@@ -367,4 +367,4 @@ export function AudioToolsPanel({
       </CardContent>
     </Card>
   );
-}
+});

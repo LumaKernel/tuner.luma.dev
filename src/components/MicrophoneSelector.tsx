@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Mic } from "lucide-react";
 import {
   Select,
@@ -17,7 +18,7 @@ type MicrophoneSelectorProps = {
   readonly compact?: boolean;
 };
 
-export function MicrophoneSelector({
+export const MicrophoneSelector = memo(function MicrophoneSelector({
   devices,
   selectedDeviceId,
   onDeviceChange,
@@ -79,4 +80,4 @@ export function MicrophoneSelector({
       </div>
     </div>
   );
-}
+});
