@@ -23,6 +23,7 @@ import { SettingsDialog } from "./components/SettingsDialog";
 import { RecordingList } from "./components/RecordingList";
 import { StartOverlay } from "./components/StartOverlay";
 import { VolumeLevel } from "./components/VolumeLevel";
+import { AudioToolsPanel } from "./components/AudioToolsPanel";
 import { ModeToggle } from "./components/mode-toggle";
 import { ThemeProvider } from "./components/theme-provider";
 import { Button } from "./components/ui/button";
@@ -344,20 +345,27 @@ function TunerApp() {
         </div>
 
         {isActive && (
-          <ControlPanel
-            onSave={handleSave}
-            isSaving={isSaving}
-            recordingDuration={settings.state.recordingDuration}
-            onDurationChange={(duration) => {
-              settings.update((draft) => {
-                draft.recordingDuration = duration;
-              });
-            }}
-            devices={devices}
-            selectedDeviceId={selectedDeviceId}
-            onDeviceChange={handleDeviceChange}
-            isDevicesLoading={isLoading}
-          />
+          <>
+            <ControlPanel
+              onSave={handleSave}
+              isSaving={isSaving}
+              recordingDuration={settings.state.recordingDuration}
+              onDurationChange={(duration) => {
+                settings.update((draft) => {
+                  draft.recordingDuration = duration;
+                });
+              }}
+              devices={devices}
+              selectedDeviceId={selectedDeviceId}
+              onDeviceChange={handleDeviceChange}
+              isDevicesLoading={isLoading}
+            />
+            <AudioToolsPanel
+              notation={settings.state.notation}
+              accidental={settings.state.accidental}
+              advancedSettings={settings.state.advanced}
+            />
+          </>
         )}
       </main>
 
