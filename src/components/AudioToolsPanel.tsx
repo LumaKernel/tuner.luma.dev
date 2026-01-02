@@ -256,6 +256,7 @@ const BpmInputModal = memo(function BpmInputModal({
 /**
  * BPM presets settings modal for customizing preset values.
  * Fixed number of presets (6), only values can be changed.
+ * Each preset opens the BpmInputModal for detailed editing.
  */
 type BpmPresetsSettingsModalProps = {
   readonly open: boolean;
@@ -270,13 +271,15 @@ const BpmPresetsSettingsModal = memo(function BpmPresetsSettingsModal({
   presets,
   onPresetsChange,
 }: BpmPresetsSettingsModalProps) {
-  const [editingValues, setEditingValues] = useState<readonly string[]>([]);
+  const [editingPresets, setEditingPresets] = useState<readonly number[]>([]);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   // Reset editing state when modal opens
   const handleOpenChange = useCallback(
     (isOpen: boolean) => {
       if (isOpen) {
-        setEditingValues(presets.map(String));
+        setEditingPresets(presets);
+        setEditingIndex(null);
       } else {
         onClose();
       }
@@ -284,106 +287,104 @@ const BpmPresetsSettingsModal = memo(function BpmPresetsSettingsModal({
     [presets, onClose],
   );
 
-  const handleValueChange = useCallback((index: number, value: string) => {
-    setEditingValues((current) => {
-      const newValues = [...current];
-      newValues[index] = value;
-      return newValues;
-    });
+  const handlePresetClick = useCallback((index: number) => {
+    setEditingIndex(index);
   }, []);
 
+  const handlePresetChange = useCallback(
+    (newBpm: number) => {
+      setEditingPresets((current) => {
+        const newPresets = [...current];
+        if (editingIndex !== null) {
+          newPresets[editingIndex] = newBpm;
+        }
+        return newPresets;
+      });
+      setEditingIndex(null);
+    },
+    [editingIndex],
+  );
+
   const handleResetToDefault = useCallback(() => {
-    setEditingValues(BPM_PRESETS_DEFAULT.map(String));
+    setEditingPresets([...BPM_PRESETS_DEFAULT]);
   }, []);
 
   const handleSave = useCallback(() => {
-    const parsedPresets = editingValues
-      .map((v) => {
-        const parsed = parseFloat(v);
-        if (Number.isNaN(parsed)) return BPM_DEFAULT;
-        // Clamp to valid range and round
-        const clamped = Math.max(BPM_MIN, Math.min(BPM_MAX, parsed));
-        return Math.round(clamped * 100) / 100;
-      })
-      .sort((a, b) => a - b);
-    onPresetsChange(parsedPresets);
+    const sortedPresets = [...editingPresets].sort((a, b) => a - b);
+    onPresetsChange(sortedPresets);
     onClose();
-  }, [editingValues, onPresetsChange, onClose]);
+  }, [editingPresets, onPresetsChange, onClose]);
 
-  // Check if all values are valid
-  const allValid = useMemo(() => {
-    return editingValues.every((v) => {
-      const parsed = parseFloat(v);
-      return !Number.isNaN(parsed) && parsed >= BPM_MIN && parsed <= BPM_MAX;
-    });
-  }, [editingValues]);
+  const currentEditingBpm =
+    editingIndex !== null ? editingPresets[editingIndex] : 0;
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-xs">
-        <DialogHeader>
-          <DialogTitle>BPMプリセット設定</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          {/* Preset inputs */}
-          <div className="space-y-2">
-            <Label>
-              プリセット値 ({BPM_MIN}〜{BPM_MAX})
-            </Label>
-            <div className="grid grid-cols-3 gap-2">
-              {editingValues.map((value, index) => (
-                <Input
-                  key={index}
-                  type="number"
-                  min={BPM_MIN}
-                  max={BPM_MAX}
-                  step="any"
-                  value={value}
-                  onChange={(e) => handleValueChange(index, e.target.value)}
-                  className="text-center font-mono"
-                />
-              ))}
+    <>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent className="sm:max-w-xs">
+          <DialogHeader>
+            <DialogTitle>BPMプリセット設定</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Preset buttons */}
+            <div className="space-y-2">
+              <Label>プリセット値（クリックで編集）</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {editingPresets.map((preset, index) => (
+                  <Button
+                    key={index}
+                    variant="outline"
+                    className="h-10 font-mono"
+                    onClick={() => handlePresetClick(index)}
+                  >
+                    {Number.isInteger(preset) ? preset : preset.toFixed(1)}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                保存時に自動でソートされます
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              保存時に自動でソートされます
-            </p>
-          </div>
 
-          {/* Actions */}
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleResetToDefault}
-              className="flex-1"
-            >
-              <RotateCcw className="h-3 w-3 mr-1" />
-              初期値に戻す
-            </Button>
-          </div>
+            {/* Actions */}
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleResetToDefault}
+                className="flex-1"
+              >
+                <RotateCcw className="h-3 w-3 mr-1" />
+                初期値に戻す
+              </Button>
+            </div>
 
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1"
-              onClick={onClose}
-            >
-              キャンセル
-            </Button>
-            <Button
-              type="button"
-              className="flex-1"
-              onClick={handleSave}
-              disabled={!allValid}
-            >
-              保存
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={onClose}
+              >
+                キャンセル
+              </Button>
+              <Button type="button" className="flex-1" onClick={handleSave}>
+                保存
+              </Button>
+            </div>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      {/* BPM Input Modal for editing individual preset */}
+      <BpmInputModal
+        open={editingIndex !== null}
+        onClose={() => setEditingIndex(null)}
+        currentBpm={currentEditingBpm}
+        onBpmChange={handlePresetChange}
+      />
+    </>
   );
 });
 
