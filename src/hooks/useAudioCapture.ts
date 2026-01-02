@@ -373,8 +373,9 @@ function processAudio(): void {
 // ============================================================================
 
 async function startAudio(deviceId?: string): Promise<void> {
-  // Stop any existing audio first
-  stopAudio();
+  // Capture old resources to clean up AFTER new stream is ready
+  // This prevents isActive from becoming false during device switch
+  const oldResources = resources;
 
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: {
@@ -385,6 +386,15 @@ async function startAudio(deviceId?: string): Promise<void> {
       channelCount: 2,
     },
   });
+
+  // Clean up old resources AFTER new stream is acquired
+  if (oldResources) {
+    if (oldResources.animationFrameId !== null) {
+      cancelAnimationFrame(oldResources.animationFrameId);
+    }
+    oldResources.stream.getTracks().forEach((track) => track.stop());
+    void oldResources.audioContext.close();
+  }
 
   const audioContext = new AudioContext();
 

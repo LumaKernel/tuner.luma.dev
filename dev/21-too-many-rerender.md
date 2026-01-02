@@ -26,3 +26,7 @@ ultrathink
 ultrathink
 
 
+bpmはモーダル指定なら上限はもっと高くても良さそう。音楽ゲームの曲はもっと早いのがあるし。
+ultrathink
+
+
