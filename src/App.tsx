@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo, memo } from "react";
 import { ListMusic, Menu, Settings } from "lucide-react";
 import { toast } from "sonner";
 
@@ -35,9 +35,14 @@ import {
   SheetTrigger,
 } from "./components/ui/sheet";
 import { Toaster } from "./components/ui/sonner";
-import { useAudioInput } from "./hooks/useAudioInput";
-import { usePitchDetection } from "./hooks/usePitchDetection";
-import { useVolumeLevel } from "./hooks/useVolumeLevel";
+import {
+  useIsActive,
+  usePitchData,
+  useVolumeLevelData,
+  useAudioStream,
+  useAudioControls,
+  useNoiseGateEffect,
+} from "./hooks/useAudioCapture";
 import { useRecordingBuffer } from "./hooks/useRecordingBuffer";
 import { useRecordingStorage } from "./hooks/useRecordingStorage";
 import { useMicrophoneDevices } from "./hooks/useMicrophoneDevices";
@@ -48,34 +53,213 @@ import {
 } from "./hooks/useMicSelectionState";
 import { selectMicrophone, recordMicSelection } from "./lib/micAutoSelect";
 
+// ============================================================================
+// Components that subscribe to high-frequency data
+// ============================================================================
+
+/**
+ * Component that displays pitch info.
+ * Subscribes to pitch data - re-renders every frame.
+ */
+const PitchInfoContainer = memo(function PitchInfoContainer({
+  notation,
+  accidental,
+  advancedSettings,
+}: {
+  readonly notation: "letter" | "solfege";
+  readonly accidental: "sharp" | "flat";
+  readonly advancedSettings: Parameters<
+    typeof PitchInfo
+  >[0]["advancedSettings"];
+}) {
+  const { currentPitch } = usePitchData();
+  return (
+    <PitchInfo
+      pitch={currentPitch}
+      notation={notation}
+      accidental={accidental}
+      advancedSettings={advancedSettings}
+    />
+  );
+});
+
+/**
+ * Component that displays volume level.
+ * Subscribes to volume data - re-renders every frame.
+ */
+const VolumeLevelContainer = memo(function VolumeLevelContainer() {
+  const volumeLevel = useVolumeLevelData();
+  return <VolumeLevel volume={volumeLevel} />;
+});
+
+/**
+ * Component that displays tuner graph.
+ * Subscribes to pitch data - re-renders every frame.
+ */
+const TunerDisplayContainer = memo(function TunerDisplayContainer({
+  notation,
+  accidental,
+}: {
+  readonly notation: "letter" | "solfege";
+  readonly accidental: "sharp" | "flat";
+}) {
+  const { pitchHistory, timestamp } = usePitchData();
+  return (
+    <TunerDisplay
+      pitchHistory={pitchHistory}
+      notation={notation}
+      accidental={accidental}
+      now={timestamp}
+    />
+  );
+});
+
+/**
+ * Component that handles recording buffer.
+ * Subscribes to stream - only re-renders when stream changes.
+ */
+function RecordingBufferProvider({
+  recordingDuration,
+  children,
+}: {
+  readonly recordingDuration: number;
+  readonly children: (
+    saveRecording: () => Promise<string | null>,
+  ) => React.ReactNode;
+}) {
+  const stream = useAudioStream();
+  const { saveRecording } = useRecordingBuffer(stream, recordingDuration);
+  return <>{children(saveRecording)}</>;
+}
+
+// ============================================================================
+// Header Component (memoized to prevent re-renders)
+// ============================================================================
+
+type HeaderProps = {
+  readonly onOpenRecordings: () => void;
+  readonly onOpenSettings: () => void;
+  readonly isMenuOpen: boolean;
+  readonly onMenuOpenChange: (open: boolean) => void;
+};
+
+const Header = memo(function Header({
+  onOpenRecordings,
+  onOpenSettings,
+  isMenuOpen,
+  onMenuOpenChange,
+}: HeaderProps) {
+  return (
+    <header className="p-4 border-b">
+      <div className="max-w-4xl mx-auto flex items-center justify-between">
+        <h1 className="text-xl font-bold tracking-tight">tuner.luma.dev</h1>
+
+        {/* Desktop menu */}
+        <div className="hidden md:flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={onOpenRecordings}>
+            <ListMusic />
+            録音一覧
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onOpenSettings}>
+            <Settings />
+            設定
+          </Button>
+          <ModeToggle />
+          <Button variant="ghost" size="icon" asChild>
+            <a
+              href="https://github.com/LumaKernel/tuner.luma.dev"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="GitHub"
+            >
+              <GitHubIcon className="h-[1.2rem] w-[1.2rem]" />
+            </a>
+          </Button>
+        </div>
+
+        {/* Mobile menu */}
+        <Sheet open={isMenuOpen} onOpenChange={onMenuOpenChange}>
+          <SheetTrigger asChild className="md:hidden">
+            <Button variant="ghost" size="icon" aria-label="メニュー">
+              <Menu className="h-5 w-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-64">
+            <SheetHeader>
+              <SheetTitle>メニュー</SheetTitle>
+            </SheetHeader>
+            <nav className="flex flex-col gap-2 mt-4">
+              <Button
+                variant="ghost"
+                className="justify-start"
+                onClick={() => {
+                  onOpenRecordings();
+                  onMenuOpenChange(false);
+                }}
+              >
+                <ListMusic className="mr-2 h-4 w-4" />
+                録音一覧
+              </Button>
+              <Button
+                variant="ghost"
+                className="justify-start"
+                onClick={() => {
+                  onOpenSettings();
+                  onMenuOpenChange(false);
+                }}
+              >
+                <Settings className="mr-2 h-4 w-4" />
+                設定
+              </Button>
+              <div className="flex items-center gap-2 px-3 py-2">
+                <span className="text-sm">テーマ</span>
+                <ModeToggle />
+              </div>
+              <Button variant="ghost" className="justify-start" asChild>
+                <a
+                  href="https://github.com/LumaKernel/tuner.luma.dev"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <GitHubIcon className="mr-2 h-4 w-4" />
+                  GitHub
+                </a>
+              </Button>
+            </nav>
+          </SheetContent>
+        </Sheet>
+      </div>
+    </header>
+  );
+});
+
+// ============================================================================
+// Main App Component
+// ============================================================================
+
 function TunerApp() {
+  // UI state (low frequency)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isRecordingsOpen, setIsRecordingsOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+
+  // Settings (low frequency)
   const settings = useSettings();
   const micSelection = useMicSelectionState();
 
+  // Device list (low frequency)
   const { devices, isLoading, error, refreshDevices } = useMicrophoneDevices();
-  const { isActive, startAudio, audioData, stereoData, sampleRate, stream } =
-    useAudioInput();
 
-  const {
-    currentPitch,
-    pitchHistory,
-    timestamp: pitchTimestamp,
-  } = usePitchDetection(audioData, sampleRate, {
-    noiseGateThreshold: settings.state.advanced.noiseGateThreshold,
-  });
+  // Audio state - only subscribes to isActive (changes rarely)
+  const isActive = useIsActive();
+  const { startAudio } = useAudioControls();
 
-  const volumeLevel = useVolumeLevel(stereoData);
+  // Set noise gate threshold when settings change
+  useNoiseGateEffect(settings.state.advanced.noiseGateThreshold);
 
-  const { saveRecording } = useRecordingBuffer(
-    stream,
-    settings.state.recordingDuration,
-  );
-
+  // Recording storage (low frequency)
   const {
     recordings,
     refresh,
@@ -117,11 +301,9 @@ function TunerApp() {
   }
 
   // Handle device change while active - restart audio with new device
-  // This is for explicit user selection, so record it
   const handleDeviceChange = useCallback(
     (deviceId: string) => {
       setSelectedDeviceId(deviceId);
-      // Record explicit selection
       micSelection.update((draft) => {
         const newState = recordMicSelection(
           {
@@ -141,22 +323,6 @@ function TunerApp() {
     [isActive, startAudio, micSelection, availableDeviceIds],
   );
 
-  const handleSave = useCallback(async () => {
-    setIsSaving(true);
-    try {
-      const id = await saveRecording();
-      if (id) {
-        toast.success("録音を保存しました。録音一覧から確認してください。");
-      } else {
-        toast.error("保存するデータがありません");
-      }
-    } catch {
-      toast.error("保存に失敗しました");
-    } finally {
-      setIsSaving(false);
-    }
-  }, [saveRecording]);
-
   const handleStart = useCallback(() => {
     void startAudio(selectedDeviceId || undefined);
   }, [startAudio, selectedDeviceId]);
@@ -165,6 +331,18 @@ function TunerApp() {
     setIsRecordingsOpen(true);
     void refresh();
   }, [refresh]);
+
+  const handleOpenSettings = useCallback(() => {
+    setIsSettingsOpen(true);
+  }, []);
+
+  const handleCloseSettings = useCallback(() => {
+    setIsSettingsOpen(false);
+  }, []);
+
+  const handleMenuOpenChange = useCallback((open: boolean) => {
+    setIsMenuOpen(open);
+  }, []);
 
   const handleDownload = useCallback(
     async (id: string, format: Parameters<typeof downloadRecording>[1]) => {
@@ -208,9 +386,13 @@ function TunerApp() {
     [settings],
   );
 
+  const handleCloseRecordings = useCallback(() => {
+    stopPlayback();
+    setIsRecordingsOpen(false);
+  }, [stopPlayback]);
+
   // Track if we've attempted auto-start
   const autoStartAttemptedRef = useRef(false);
-  // Capture autoStart setting at mount time (don't react to changes)
   const initialAutoStartRef = useRef(settings.state.autoStart);
 
   // Load devices on mount
@@ -218,7 +400,7 @@ function TunerApp() {
     void refreshDevices();
   }, [refreshDevices]);
 
-  // Auto-start only on initial page load (not when checkbox is changed)
+  // Auto-start only on initial page load
   useEffect(() => {
     if (
       initialAutoStartRef.current &&
@@ -234,112 +416,29 @@ function TunerApp() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <header className="p-4 border-b">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <h1 className="text-xl font-bold tracking-tight">tuner.luma.dev</h1>
-
-          {/* Desktop menu */}
-          <div className="hidden md:flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={handleOpenRecordings}>
-              <ListMusic />
-              録音一覧
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setIsSettingsOpen(true);
-              }}
-            >
-              <Settings />
-              設定
-            </Button>
-            <ModeToggle />
-            <Button variant="ghost" size="icon" asChild>
-              <a
-                href="https://github.com/LumaKernel/tuner.luma.dev"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="GitHub"
-              >
-                <GitHubIcon className="h-[1.2rem] w-[1.2rem]" />
-              </a>
-            </Button>
-          </div>
-
-          {/* Mobile menu */}
-          <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-            <SheetTrigger asChild className="md:hidden">
-              <Button variant="ghost" size="icon" aria-label="メニュー">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-64">
-              <SheetHeader>
-                <SheetTitle>メニュー</SheetTitle>
-              </SheetHeader>
-              <nav className="flex flex-col gap-2 mt-4">
-                <Button
-                  variant="ghost"
-                  className="justify-start"
-                  onClick={() => {
-                    handleOpenRecordings();
-                    setIsMenuOpen(false);
-                  }}
-                >
-                  <ListMusic className="mr-2 h-4 w-4" />
-                  録音一覧
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="justify-start"
-                  onClick={() => {
-                    setIsSettingsOpen(true);
-                    setIsMenuOpen(false);
-                  }}
-                >
-                  <Settings className="mr-2 h-4 w-4" />
-                  設定
-                </Button>
-                <div className="flex items-center gap-2 px-3 py-2">
-                  <span className="text-sm">テーマ</span>
-                  <ModeToggle />
-                </div>
-                <Button variant="ghost" className="justify-start" asChild>
-                  <a
-                    href="https://github.com/LumaKernel/tuner.luma.dev"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <GitHubIcon className="mr-2 h-4 w-4" />
-                    GitHub
-                  </a>
-                </Button>
-              </nav>
-            </SheetContent>
-          </Sheet>
-        </div>
-      </header>
+      <Header
+        onOpenRecordings={handleOpenRecordings}
+        onOpenSettings={handleOpenSettings}
+        isMenuOpen={isMenuOpen}
+        onMenuOpenChange={handleMenuOpenChange}
+      />
 
       <main className="flex-1 flex flex-col p-4 gap-4 max-w-4xl mx-auto w-full">
         {isActive && (
           <>
-            <PitchInfo
-              pitch={currentPitch}
+            <PitchInfoContainer
               notation={settings.state.notation}
               accidental={settings.state.accidental}
               advancedSettings={settings.state.advanced}
             />
-            <VolumeLevel volume={volumeLevel} />
+            <VolumeLevelContainer />
           </>
         )}
 
         <div className="relative flex-1 min-h-32">
-          <TunerDisplay
-            pitchHistory={pitchHistory}
+          <TunerDisplayContainer
             notation={settings.state.notation}
             accidental={settings.state.accidental}
-            now={pitchTimestamp}
           />
           {!isActive && (
             <StartOverlay
@@ -357,41 +456,58 @@ function TunerApp() {
         </div>
 
         {isActive && (
-          <>
-            <ControlPanel
-              onSave={handleSave}
-              isSaving={isSaving}
-              recordingDuration={settings.state.recordingDuration}
-              onDurationChange={handleDurationChange}
-              devices={devices}
-              selectedDeviceId={selectedDeviceId}
-              onDeviceChange={handleDeviceChange}
-              isDevicesLoading={isLoading}
-            />
-            <AudioToolsPanel
-              notation={settings.state.notation}
-              accidental={settings.state.accidental}
-              advancedSettings={settings.state.advanced}
-            />
-          </>
+          <RecordingBufferProvider
+            recordingDuration={settings.state.recordingDuration}
+          >
+            {(saveRecording) => (
+              <>
+                <ControlPanel
+                  onSave={async () => {
+                    setIsSaving(true);
+                    try {
+                      const id = await saveRecording();
+                      if (id) {
+                        toast.success(
+                          "録音を保存しました。録音一覧から確認してください。",
+                        );
+                      } else {
+                        toast.error("保存するデータがありません");
+                      }
+                    } catch {
+                      toast.error("保存に失敗しました");
+                    } finally {
+                      setIsSaving(false);
+                    }
+                  }}
+                  isSaving={isSaving}
+                  recordingDuration={settings.state.recordingDuration}
+                  onDurationChange={handleDurationChange}
+                  devices={devices}
+                  selectedDeviceId={selectedDeviceId}
+                  onDeviceChange={handleDeviceChange}
+                  isDevicesLoading={isLoading}
+                />
+                <AudioToolsPanel
+                  notation={settings.state.notation}
+                  accidental={settings.state.accidental}
+                  advancedSettings={settings.state.advanced}
+                />
+              </>
+            )}
+          </RecordingBufferProvider>
         )}
       </main>
 
       <SettingsDialog
         open={isSettingsOpen}
-        onClose={() => {
-          setIsSettingsOpen(false);
-        }}
+        onClose={handleCloseSettings}
         settings={settings.state}
         onSettingsChange={settings.update}
       />
 
       <RecordingList
         open={isRecordingsOpen}
-        onClose={() => {
-          stopPlayback();
-          setIsRecordingsOpen(false);
-        }}
+        onClose={handleCloseRecordings}
         recordings={recordings}
         onDelete={handleDelete}
         onDownload={handleDownload}

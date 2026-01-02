@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, memo } from "react";
 import type { WritableDraft } from "immer";
 import { ChevronRight } from "lucide-react";
 import {
@@ -37,7 +37,7 @@ type SettingsDialogProps = {
   ) => void;
 };
 
-export function SettingsDialog({
+export const SettingsDialog = memo(function SettingsDialog({
   open,
   onClose,
   settings,
@@ -199,4 +199,4 @@ export function SettingsDialog({
       />
     </Dialog>
   );
-}
+});

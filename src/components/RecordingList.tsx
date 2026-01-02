@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, memo } from "react";
 import {
   Download,
   Trash2,
@@ -80,7 +80,7 @@ function formatTimeRemaining(expiresAt: number): string {
   return "まもなく期限切れ";
 }
 
-export function RecordingList({
+export const RecordingList = memo(function RecordingList({
   open,
   onClose,
   recordings,
@@ -248,4 +248,4 @@ export function RecordingList({
       </DialogContent>
     </Dialog>
   );
-}
+});
