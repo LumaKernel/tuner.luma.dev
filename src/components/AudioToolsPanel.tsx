@@ -37,6 +37,23 @@ import {
   type TuningOptions,
 } from "@/lib/noteUtils";
 import type { Notation, Accidental, AdvancedSettings } from "@/types";
+import {
+  BPM_MIN,
+  BPM_MAX,
+  BPM_DEFAULT,
+  BPM_SLIDER_MAX,
+  VOLUME_MIN,
+  VOLUME_MAX,
+  VOLUME_STEP,
+  VOLUME_DEFAULT_REFERENCE,
+  VOLUME_DEFAULT_METRONOME,
+  MIDI_NOTES_PER_OCTAVE,
+  MIDI_C2,
+  MIDI_A4,
+  MIDI_OCTAVE_OFFSET,
+  NOTE_RANGE_COUNT,
+  METRONOME_BEATS_PER_MEASURE,
+} from "@/constants/audio";
 
 type AudioToolsPanelProps = {
   readonly notation: Notation;
@@ -45,14 +62,14 @@ type AudioToolsPanelProps = {
 };
 
 // Generate note options (C2 to C7)
-const NOTE_OPTIONS = Array.from({ length: 61 }, (_, i) => {
-  const midi = 36 + i; // C2 = 36
-  return { midi, octave: Math.floor(midi / 12) - 1, noteIndex: midi % 12 };
+const NOTE_OPTIONS = Array.from({ length: NOTE_RANGE_COUNT }, (_, i) => {
+  const midi = MIDI_C2 + i;
+  return {
+    midi,
+    octave: Math.floor(midi / MIDI_NOTES_PER_OCTAVE) - MIDI_OCTAVE_OFFSET,
+    noteIndex: midi % MIDI_NOTES_PER_OCTAVE,
+  };
 });
-
-const DEFAULT_REFERENCE_VOLUME = 0.3;
-const DEFAULT_METRONOME_VOLUME = 0.5;
-const DEFAULT_BPM = 120;
 
 /**
  * Beat indicator component - only re-renders on beat changes.
@@ -61,7 +78,7 @@ const MetronomeBeatIndicator = memo(function MetronomeBeatIndicator() {
   const beat = useMetronomeBeat();
   return (
     <div className="flex gap-1">
-      {[0, 1, 2, 3].map((i) => (
+      {Array.from({ length: METRONOME_BEATS_PER_MEASURE }, (_, i) => (
         <div
           key={i}
           className={`w-2 h-2 rounded-full transition-colors ${
@@ -114,7 +131,7 @@ const BpmInputModal = memo(function BpmInputModal({
     (e: React.FormEvent) => {
       e.preventDefault();
       const parsed = parseFloat(inputValue);
-      if (!Number.isNaN(parsed) && parsed >= 20 && parsed <= 999) {
+      if (!Number.isNaN(parsed) && parsed >= BPM_MIN && parsed <= BPM_MAX) {
         onBpmChange(parsed);
         onClose();
       }
@@ -124,7 +141,7 @@ const BpmInputModal = memo(function BpmInputModal({
 
   const isValid = useMemo(() => {
     const parsed = parseFloat(inputValue);
-    return !Number.isNaN(parsed) && parsed >= 20 && parsed <= 999;
+    return !Number.isNaN(parsed) && parsed >= BPM_MIN && parsed <= BPM_MAX;
   }, [inputValue]);
 
   return (
@@ -135,12 +152,14 @@ const BpmInputModal = memo(function BpmInputModal({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="bpm-input">BPM (20〜999)</Label>
+            <Label htmlFor="bpm-input">
+              BPM ({BPM_MIN}〜{BPM_MAX})
+            </Label>
             <Input
               id="bpm-input"
               type="number"
-              min={20}
-              max={999}
+              min={BPM_MIN}
+              max={BPM_MAX}
               step="any"
               value={inputValue}
               onChange={handleInputChange}
@@ -173,7 +192,7 @@ export const AudioToolsPanel = memo(function AudioToolsPanel({
   advancedSettings,
 }: AudioToolsPanelProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [selectedMidi, setSelectedMidi] = useState(69); // A4
+  const [selectedMidi, setSelectedMidi] = useState(MIDI_A4);
   const [isBpmModalOpen, setIsBpmModalOpen] = useState(false);
 
   const tuningOptions: TuningOptions = useMemo(
@@ -193,7 +212,7 @@ export const AudioToolsPanel = memo(function AudioToolsPanel({
   const referenceSound = useReferenceSound(
     referenceFrequency,
     "sine",
-    DEFAULT_REFERENCE_VOLUME,
+    VOLUME_DEFAULT_REFERENCE,
   );
   const metronome = useMetronomeControl();
 
@@ -246,15 +265,15 @@ export const AudioToolsPanel = memo(function AudioToolsPanel({
   );
 
   const resetReferenceVolume = useCallback(() => {
-    referenceSound.setVolume(DEFAULT_REFERENCE_VOLUME);
+    referenceSound.setVolume(VOLUME_DEFAULT_REFERENCE);
   }, [referenceSound]);
 
   const resetMetronomeVolume = useCallback(() => {
-    metronome.setVolume(DEFAULT_METRONOME_VOLUME);
+    metronome.setVolume(VOLUME_DEFAULT_METRONOME);
   }, [metronome]);
 
   const resetBpm = useCallback(() => {
-    metronome.setBpm(DEFAULT_BPM);
+    metronome.setBpm(BPM_DEFAULT);
   }, [metronome]);
 
   const noteNames = useMemo(
@@ -264,8 +283,9 @@ export const AudioToolsPanel = memo(function AudioToolsPanel({
 
   const getNoteLabel = useCallback(
     (midi: number) => {
-      const noteIndex = midi % 12;
-      const octave = Math.floor(midi / 12) - 1;
+      const noteIndex = midi % MIDI_NOTES_PER_OCTAVE;
+      const octave =
+        Math.floor(midi / MIDI_NOTES_PER_OCTAVE) - MIDI_OCTAVE_OFFSET;
       return `${noteNames[noteIndex]}${octave}`;
     },
     [noteNames],
@@ -373,9 +393,9 @@ export const AudioToolsPanel = memo(function AudioToolsPanel({
                 <Slider
                   value={[referenceSound.volume]}
                   onValueChange={handleReferenceVolumeChange}
-                  min={0}
-                  max={1}
-                  step={0.01}
+                  min={VOLUME_MIN}
+                  max={VOLUME_MAX}
+                  step={VOLUME_STEP}
                   className="flex-1"
                 />
                 <span className="text-xs font-mono w-10 text-right">
@@ -386,7 +406,7 @@ export const AudioToolsPanel = memo(function AudioToolsPanel({
                   size="sm"
                   onClick={resetReferenceVolume}
                   className="h-6 w-6 p-0"
-                  disabled={referenceSound.volume === DEFAULT_REFERENCE_VOLUME}
+                  disabled={referenceSound.volume === VOLUME_DEFAULT_REFERENCE}
                 >
                   <RotateCcw className="h-3 w-3" />
                 </Button>
@@ -428,8 +448,8 @@ export const AudioToolsPanel = memo(function AudioToolsPanel({
                 <Slider
                   value={[metronome.bpm]}
                   onValueChange={handleBpmChange}
-                  min={20}
-                  max={300}
+                  min={BPM_MIN}
+                  max={BPM_SLIDER_MAX}
                   step={1}
                   className="flex-1"
                 />
@@ -448,7 +468,7 @@ export const AudioToolsPanel = memo(function AudioToolsPanel({
                   size="sm"
                   onClick={resetBpm}
                   className="h-6 w-6 p-0"
-                  disabled={metronome.bpm === DEFAULT_BPM}
+                  disabled={metronome.bpm === BPM_DEFAULT}
                 >
                   <RotateCcw className="h-3 w-3" />
                 </Button>
@@ -468,9 +488,9 @@ export const AudioToolsPanel = memo(function AudioToolsPanel({
                 <Slider
                   value={[metronome.volume]}
                   onValueChange={handleMetronomeVolumeChange}
-                  min={0}
-                  max={1}
-                  step={0.01}
+                  min={VOLUME_MIN}
+                  max={VOLUME_MAX}
+                  step={VOLUME_STEP}
                   className="flex-1"
                 />
                 <span className="text-xs font-mono w-10 text-right">
@@ -481,7 +501,7 @@ export const AudioToolsPanel = memo(function AudioToolsPanel({
                   size="sm"
                   onClick={resetMetronomeVolume}
                   className="h-6 w-6 p-0"
-                  disabled={metronome.volume === DEFAULT_METRONOME_VOLUME}
+                  disabled={metronome.volume === VOLUME_DEFAULT_METRONOME}
                 >
                   <RotateCcw className="h-3 w-3" />
                 </Button>

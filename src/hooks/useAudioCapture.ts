@@ -1,15 +1,23 @@
 import { useSyncExternalStore, useCallback, useRef, useEffect } from "react";
 import type { PitchData, PitchHistoryEntry } from "@/types";
 import type * as PitchDetectorModule from "@/wasm/pkg/pitch_detector";
-
-// ============================================================================
-// Constants
-// ============================================================================
-
-const BUFFER_SIZE = 2048;
-const HISTORY_DURATION_MS = 30000;
-const MIN_FREQUENCY = 60;
-const MAX_FREQUENCY = 2000;
+import {
+  AUDIO_BUFFER_SIZE,
+  PITCH_HISTORY_DURATION_MS,
+  PITCH_MIN_FREQUENCY,
+  PITCH_MAX_FREQUENCY,
+  PITCH_DETECTION_THRESHOLD,
+  PITCH_TIMEOUT_MS,
+  DEFAULT_SAMPLE_RATE,
+  DEFAULT_NOISE_GATE_THRESHOLD,
+  STEREO_CHECK_FRAMES,
+  STEREO_SAMPLE_COUNT,
+  STEREO_DETECTION_THRESHOLD,
+  STEREO_SAMPLE_INTERVAL,
+  STEREO_DIFF_RATIO,
+  ANALYSER_SMOOTHING_STEREO,
+  ANALYSER_SMOOTHING_PITCH,
+} from "@/constants/audio";
 
 // ============================================================================
 // Types
@@ -90,7 +98,7 @@ ensureWasmInit();
 // ============================================================================
 
 function detectPitchJS(buffer: Float32Array, sampleRate: number): number {
-  const threshold = 0.1;
+  const threshold = PITCH_DETECTION_THRESHOLD;
   const bufferSize = buffer.length;
   const halfBufferSize = Math.floor(bufferSize / 2);
 
@@ -144,7 +152,7 @@ function detectPitchJS(buffer: Float32Array, sampleRate: number): number {
 
   const frequency = sampleRate / betterTau;
 
-  if (frequency < MIN_FREQUENCY || frequency > MAX_FREQUENCY) {
+  if (frequency < PITCH_MIN_FREQUENCY || frequency > PITCH_MAX_FREQUENCY) {
     return -1;
   }
 
@@ -190,22 +198,19 @@ function calculateChannelVolume(data: Float32Array): ChannelVolume {
 // Stereo detection state - determined once per stream, not per frame
 let isStereoDetected: boolean | null = null;
 let stereoCheckFrameCount = 0;
-const STEREO_CHECK_FRAMES = 10; // Check for this many frames before finalizing
 
 function checkIsStereo(left: Float32Array, right: Float32Array): boolean {
-  // Check more samples with a slightly higher threshold for robustness
-  const checkSamples = Math.min(200, left.length);
+  const checkSamples = Math.min(STEREO_SAMPLE_COUNT, left.length);
   let diffCount = 0;
-  const threshold = 0.005; // Slightly higher threshold to avoid noise-triggered changes
 
-  for (let i = 0; i < checkSamples; i += 5) {
-    if (Math.abs(left[i] - right[i]) > threshold) {
+  for (let i = 0; i < checkSamples; i += STEREO_SAMPLE_INTERVAL) {
+    if (Math.abs(left[i] - right[i]) > STEREO_DETECTION_THRESHOLD) {
       diffCount++;
     }
   }
 
-  // Consider stereo if more than 10% of samples differ significantly
-  return diffCount > checkSamples / 50;
+  // Consider stereo if enough samples differ significantly
+  return diffCount > checkSamples / STEREO_DIFF_RATIO;
 }
 
 function calculateVolumeLevel(stereoData: StereoAudioData): VolumeLevelData {
@@ -259,7 +264,7 @@ const DEFAULT_PITCH: PitchData = {
 
 const createInitialState = (): AudioCaptureState => ({
   isActive: false,
-  sampleRate: 44100,
+  sampleRate: DEFAULT_SAMPLE_RATE,
   stream: null,
   currentPitch: DEFAULT_PITCH,
   pitchHistory: [],
@@ -271,7 +276,7 @@ const createInitialState = (): AudioCaptureState => ({
 let state: AudioCaptureState = createInitialState();
 let resources: AudioResources | null = null;
 let pitchHistory: PitchHistoryEntry[] = [];
-let noiseGateThreshold = 0.01;
+let noiseGateThreshold = DEFAULT_NOISE_GATE_THRESHOLD;
 
 // Cached snapshots for useSyncExternalStore (must return same reference if unchanged)
 type PitchSnapshot = {
@@ -364,13 +369,13 @@ function processAudio(): void {
   }
 
   // Filter old entries
-  const cutoff = now - HISTORY_DURATION_MS;
+  const cutoff = now - PITCH_HISTORY_DURATION_MS;
   pitchHistory = pitchHistory.filter((entry) => entry.timestamp > cutoff);
 
   // Derive current pitch
   const lastEntry = pitchHistory[pitchHistory.length - 1];
   const currentPitch: PitchData =
-    lastEntry && now - lastEntry.timestamp < 200
+    lastEntry && now - lastEntry.timestamp < PITCH_TIMEOUT_MS
       ? {
           frequency: lastEntry.frequency,
           note: null,
@@ -433,16 +438,16 @@ async function startAudio(deviceId?: string): Promise<void> {
   const audioContext = new AudioContext();
 
   const analyser = audioContext.createAnalyser();
-  analyser.fftSize = BUFFER_SIZE;
-  analyser.smoothingTimeConstant = 0;
+  analyser.fftSize = AUDIO_BUFFER_SIZE;
+  analyser.smoothingTimeConstant = ANALYSER_SMOOTHING_PITCH;
 
   const leftAnalyser = audioContext.createAnalyser();
-  leftAnalyser.fftSize = BUFFER_SIZE;
-  leftAnalyser.smoothingTimeConstant = 0.3;
+  leftAnalyser.fftSize = AUDIO_BUFFER_SIZE;
+  leftAnalyser.smoothingTimeConstant = ANALYSER_SMOOTHING_STEREO;
 
   const rightAnalyser = audioContext.createAnalyser();
-  rightAnalyser.fftSize = BUFFER_SIZE;
-  rightAnalyser.smoothingTimeConstant = 0.3;
+  rightAnalyser.fftSize = AUDIO_BUFFER_SIZE;
+  rightAnalyser.smoothingTimeConstant = ANALYSER_SMOOTHING_STEREO;
 
   const source = audioContext.createMediaStreamSource(stream);
   source.connect(analyser);

@@ -1,4 +1,18 @@
 import { useRef, useEffect, useSyncExternalStore } from "react";
+import {
+  BPM_MIN,
+  BPM_MAX,
+  BPM_DEFAULT,
+  VOLUME_MIN,
+  VOLUME_MAX,
+  VOLUME_DEFAULT_METRONOME,
+  METRONOME_SCHEDULE_AHEAD_TIME,
+  METRONOME_SCHEDULER_INTERVAL,
+  METRONOME_CLICK_FREQUENCY,
+  METRONOME_CLICK_ATTACK,
+  METRONOME_CLICK_DECAY,
+  METRONOME_BEATS_PER_MEASURE,
+} from "@/constants/audio";
 
 // ============================================================================
 // Types
@@ -17,23 +31,14 @@ type AudioResources = {
 };
 
 // ============================================================================
-// Constants
-// ============================================================================
-
-// How far ahead to schedule audio (seconds)
-const SCHEDULE_AHEAD_TIME = 0.1;
-// How often to call the scheduler (milliseconds)
-const SCHEDULER_INTERVAL = 25;
-
-// ============================================================================
 // Store Implementation
 // ============================================================================
 
 // Store state
 let controlState: MetronomeControlState = {
   isPlaying: false,
-  bpm: 120,
-  volume: 0.5,
+  bpm: BPM_DEFAULT,
+  volume: VOLUME_DEFAULT_METRONOME,
 };
 let beat = 0;
 let resources: AudioResources | null = null;
@@ -72,15 +77,21 @@ function playClick(audioContext: AudioContext, time: number): void {
   oscillator.connect(gainNode);
   gainNode.connect(audioContext.destination);
 
-  oscillator.frequency.setValueAtTime(1000, time);
+  oscillator.frequency.setValueAtTime(METRONOME_CLICK_FREQUENCY, time);
   oscillator.type = "sine";
 
   gainNode.gain.setValueAtTime(0, time);
-  gainNode.gain.linearRampToValueAtTime(controlState.volume, time + 0.001);
-  gainNode.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+  gainNode.gain.linearRampToValueAtTime(
+    controlState.volume,
+    time + METRONOME_CLICK_ATTACK,
+  );
+  gainNode.gain.exponentialRampToValueAtTime(
+    0.001,
+    time + METRONOME_CLICK_DECAY,
+  );
 
   oscillator.start(time);
-  oscillator.stop(time + 0.05);
+  oscillator.stop(time + METRONOME_CLICK_DECAY);
 }
 
 function scheduler(): void {
@@ -91,12 +102,12 @@ function scheduler(): void {
 
   while (
     resources.nextNoteTime <
-    audioContext.currentTime + SCHEDULE_AHEAD_TIME
+    audioContext.currentTime + METRONOME_SCHEDULE_AHEAD_TIME
   ) {
     playClick(audioContext, resources.nextNoteTime);
 
     // Update beat counter
-    const newBeat = (beat + 1) % 4;
+    const newBeat = (beat + 1) % METRONOME_BEATS_PER_MEASURE;
     updateBeat(newBeat);
 
     // Advance to next beat
@@ -131,7 +142,7 @@ function startMetronome(): void {
   // Start the scheduler
   resources.schedulerTimerId = window.setInterval(
     scheduler,
-    SCHEDULER_INTERVAL,
+    METRONOME_SCHEDULER_INTERVAL,
   );
 
   updateControlState({ isPlaying: true });
@@ -159,11 +170,13 @@ function toggleMetronome(): void {
 }
 
 function setBpm(newBpm: number): void {
-  updateControlState({ bpm: Math.max(20, Math.min(999, newBpm)) });
+  updateControlState({ bpm: Math.max(BPM_MIN, Math.min(BPM_MAX, newBpm)) });
 }
 
 function setVolume(newVolume: number): void {
-  updateControlState({ volume: Math.max(0, Math.min(1, newVolume)) });
+  updateControlState({
+    volume: Math.max(VOLUME_MIN, Math.min(VOLUME_MAX, newVolume)),
+  });
 }
 
 // ============================================================================
@@ -186,8 +199,8 @@ function subscribeBeat(listener: () => void): () => void {
 
 const DEFAULT_CONTROL_STATE: MetronomeControlState = {
   isPlaying: false,
-  bpm: 120,
-  volume: 0.5,
+  bpm: BPM_DEFAULT,
+  volume: VOLUME_DEFAULT_METRONOME,
 };
 
 /**
@@ -235,8 +248,8 @@ export function useMetronomeBeat(): number {
  * useMetronomeControl + useMetronomeBeat separately.
  */
 export function useMetronome(
-  initialBpm = 120,
-  initialVolume = 0.5,
+  initialBpm = BPM_DEFAULT,
+  initialVolume = VOLUME_DEFAULT_METRONOME,
 ): {
   readonly isPlaying: boolean;
   readonly bpm: number;

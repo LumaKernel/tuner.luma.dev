@@ -34,3 +34,6 @@ bpmはモーダル指定なら上限はもっと高くても良さそう。音�
 ultrathink
 
 
+magic numberどうにかしたほうがよさそう。全体的にね。 ultrathink
+
+
