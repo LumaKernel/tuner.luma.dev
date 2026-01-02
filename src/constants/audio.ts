@@ -9,7 +9,6 @@ export const BPM_DEFAULT = 120;
 export const BPM_PRESETS_DEFAULT: readonly number[] = [
   80, 90, 100, 110, 120, 140,
 ];
-export const BPM_PRESETS_MAX_COUNT = 10; // Maximum number of presets
 
 // ============================================================================
 // Volume Constants

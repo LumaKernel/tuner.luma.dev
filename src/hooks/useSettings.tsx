@@ -14,12 +14,7 @@ import type {
   Temperament,
 } from "@/types";
 import { DEFAULT_ADVANCED_SETTINGS } from "@/types";
-import {
-  BPM_PRESETS_DEFAULT,
-  BPM_MIN,
-  BPM_MAX,
-  BPM_PRESETS_MAX_COUNT,
-} from "@/constants/audio";
+import { BPM_PRESETS_DEFAULT, BPM_MIN, BPM_MAX } from "@/constants/audio";
 
 const STORAGE_KEY = "tuner-settings";
 
@@ -81,19 +76,22 @@ function sanitizeAdvancedSettings(parsed: unknown): AdvancedSettings {
   };
 }
 
-// Validate and sanitize bpm presets
+// Validate and sanitize bpm presets (fixed count of 6)
 function sanitizeBpmPresets(parsed: unknown): readonly number[] {
   if (!Array.isArray(parsed)) {
     return defaultSettings.bpmPresets;
   }
 
+  // Must have exactly 6 valid presets
   const validPresets = parsed
     .filter(
       (v): v is number => typeof v === "number" && v >= BPM_MIN && v <= BPM_MAX,
     )
-    .slice(0, BPM_PRESETS_MAX_COUNT);
+    .slice(0, BPM_PRESETS_DEFAULT.length);
 
-  return validPresets.length > 0 ? validPresets : defaultSettings.bpmPresets;
+  return validPresets.length === BPM_PRESETS_DEFAULT.length
+    ? validPresets
+    : defaultSettings.bpmPresets;
 }
 
 // Validate and sanitize loaded settings

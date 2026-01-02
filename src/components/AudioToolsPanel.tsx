@@ -7,8 +7,6 @@ import {
   ChevronDown,
   ChevronUp,
   Settings,
-  Plus,
-  X,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,7 +45,6 @@ import {
   BPM_DEFAULT,
   BPM_SLIDER_MAX,
   BPM_PRESETS_DEFAULT,
-  BPM_PRESETS_MAX_COUNT,
   VOLUME_MIN,
   VOLUME_MAX,
   VOLUME_STEP,
@@ -258,6 +255,7 @@ const BpmInputModal = memo(function BpmInputModal({
 
 /**
  * BPM presets settings modal for customizing preset values.
+ * Fixed number of presets (6), only values can be changed.
  */
 type BpmPresetsSettingsModalProps = {
   readonly open: boolean;
@@ -272,15 +270,13 @@ const BpmPresetsSettingsModal = memo(function BpmPresetsSettingsModal({
   presets,
   onPresetsChange,
 }: BpmPresetsSettingsModalProps) {
-  const [editingPresets, setEditingPresets] = useState<readonly number[]>([]);
-  const [newPresetValue, setNewPresetValue] = useState("");
+  const [editingValues, setEditingValues] = useState<readonly string[]>([]);
 
   // Reset editing state when modal opens
   const handleOpenChange = useCallback(
     (isOpen: boolean) => {
       if (isOpen) {
-        setEditingPresets(presets);
-        setNewPresetValue("");
+        setEditingValues(presets.map(String));
       } else {
         onClose();
       }
@@ -288,124 +284,70 @@ const BpmPresetsSettingsModal = memo(function BpmPresetsSettingsModal({
     [presets, onClose],
   );
 
-  const handleAddPreset = useCallback(() => {
-    const parsed = parseFloat(newPresetValue);
-    if (
-      !Number.isNaN(parsed) &&
-      parsed >= BPM_MIN &&
-      parsed <= BPM_MAX &&
-      editingPresets.length < BPM_PRESETS_MAX_COUNT &&
-      !editingPresets.includes(parsed)
-    ) {
-      // Round to avoid floating point errors and sort
-      const rounded = Math.round(parsed * 100) / 100;
-      const newPresets = [...editingPresets, rounded].sort((a, b) => a - b);
-      setEditingPresets(newPresets);
-      setNewPresetValue("");
-    }
-  }, [newPresetValue, editingPresets]);
-
-  const handleRemovePreset = useCallback((presetToRemove: number) => {
-    setEditingPresets((current) => current.filter((p) => p !== presetToRemove));
+  const handleValueChange = useCallback((index: number, value: string) => {
+    setEditingValues((current) => {
+      const newValues = [...current];
+      newValues[index] = value;
+      return newValues;
+    });
   }, []);
 
   const handleResetToDefault = useCallback(() => {
-    setEditingPresets(BPM_PRESETS_DEFAULT);
+    setEditingValues(BPM_PRESETS_DEFAULT.map(String));
   }, []);
 
   const handleSave = useCallback(() => {
-    onPresetsChange(editingPresets);
+    const parsedPresets = editingValues
+      .map((v) => {
+        const parsed = parseFloat(v);
+        if (Number.isNaN(parsed)) return BPM_DEFAULT;
+        // Clamp to valid range and round
+        const clamped = Math.max(BPM_MIN, Math.min(BPM_MAX, parsed));
+        return Math.round(clamped * 100) / 100;
+      })
+      .sort((a, b) => a - b);
+    onPresetsChange(parsedPresets);
     onClose();
-  }, [editingPresets, onPresetsChange, onClose]);
+  }, [editingValues, onPresetsChange, onClose]);
 
-  const isNewPresetValid = useMemo(() => {
-    const parsed = parseFloat(newPresetValue);
-    return (
-      !Number.isNaN(parsed) &&
-      parsed >= BPM_MIN &&
-      parsed <= BPM_MAX &&
-      !editingPresets.includes(parsed)
-    );
-  }, [newPresetValue, editingPresets]);
-
-  const canAddMore = editingPresets.length < BPM_PRESETS_MAX_COUNT;
+  // Check if all values are valid
+  const allValid = useMemo(() => {
+    return editingValues.every((v) => {
+      const parsed = parseFloat(v);
+      return !Number.isNaN(parsed) && parsed >= BPM_MIN && parsed <= BPM_MAX;
+    });
+  }, [editingValues]);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-xs">
         <DialogHeader>
           <DialogTitle>BPMプリセット設定</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          {/* Current presets */}
+          {/* Preset inputs */}
           <div className="space-y-2">
-            <Label>現在のプリセット</Label>
-            <div className="flex flex-wrap gap-2">
-              {editingPresets.length === 0 ? (
-                <span className="text-muted-foreground text-sm">
-                  プリセットがありません
-                </span>
-              ) : (
-                editingPresets.map((preset) => (
-                  <div
-                    key={preset}
-                    className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md"
-                  >
-                    <span className="text-sm font-mono">
-                      {Number.isInteger(preset) ? preset : preset.toFixed(1)}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-4 w-4 p-0"
-                      onClick={() => handleRemovePreset(preset)}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Add new preset */}
-          {canAddMore && (
-            <div className="space-y-2">
-              <Label>新しいプリセットを追加</Label>
-              <div className="flex gap-2">
+            <Label>
+              プリセット値 ({BPM_MIN}〜{BPM_MAX})
+            </Label>
+            <div className="grid grid-cols-3 gap-2">
+              {editingValues.map((value, index) => (
                 <Input
+                  key={index}
                   type="number"
                   min={BPM_MIN}
                   max={BPM_MAX}
                   step="any"
-                  value={newPresetValue}
-                  onChange={(e) => setNewPresetValue(e.target.value)}
-                  placeholder={`${BPM_MIN}〜${BPM_MAX}`}
-                  className="flex-1"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      if (isNewPresetValid) {
-                        handleAddPreset();
-                      }
-                    }
-                  }}
+                  value={value}
+                  onChange={(e) => handleValueChange(index, e.target.value)}
+                  className="text-center font-mono"
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleAddPreset}
-                  disabled={!isNewPresetValid}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                最大{BPM_PRESETS_MAX_COUNT}個まで設定できます（現在
-                {editingPresets.length}個）
-              </p>
+              ))}
             </div>
-          )}
+            <p className="text-xs text-muted-foreground">
+              保存時に自動でソートされます
+            </p>
+          </div>
 
           {/* Actions */}
           <div className="flex gap-2">
@@ -434,7 +376,7 @@ const BpmPresetsSettingsModal = memo(function BpmPresetsSettingsModal({
               type="button"
               className="flex-1"
               onClick={handleSave}
-              disabled={editingPresets.length === 0}
+              disabled={!allValid}
             >
               保存
             </Button>
@@ -462,10 +404,10 @@ const BpmPresetButtons = memo(function BpmPresetButtons({
   onSettingsClick,
 }: BpmPresetButtonsProps) {
   return (
-    <div className="flex flex-wrap gap-1">
-      {presets.map((preset) => (
+    <div className="flex flex-wrap justify-center gap-1">
+      {presets.map((preset, index) => (
         <Button
-          key={preset}
+          key={index}
           variant={preset === currentBpm ? "default" : "outline"}
           size="sm"
           className="h-7 px-2 text-xs font-mono"
