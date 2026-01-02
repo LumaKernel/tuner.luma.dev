@@ -322,7 +322,7 @@ function TunerApp() {
           </>
         )}
 
-        <div className="relative flex-1 min-h-[300px] md:min-h-[400px]">
+        <div className="relative flex-1 min-h-32">
           <TunerDisplay
             pitchHistory={pitchHistory}
             notation={settings.state.notation}
