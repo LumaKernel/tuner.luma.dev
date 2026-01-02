@@ -5,3 +5,10 @@ ultrathink
 ヘッダ内の録音一覧とか、それらを開いたあとのパネルとかがまだリレンダされていそう。
 もうすこし、コードレベルで原理的に防げないものなのかな？
 ultrathink
+
+
+useAudioCapture.ts:494 The result of getSnapshot should be cached to avoid an infinite loop
+usePitchData	@	useAudioCapture.ts:494
+TunerDisplayContainer2	@	App.tsx:106
+react-dom_client.js?v=0652998c:3526 Uncaught Error: Maximum update depth exceeded. This can happen when a component repeatedly calls setState inside componentWillUpdate or componentDidUpdate. React limits the number of nested updates to prevent infinite loops.
+ultrathink

@@ -239,6 +239,21 @@ let resources: AudioResources | null = null;
 let pitchHistory: PitchHistoryEntry[] = [];
 let noiseGateThreshold = 0.01;
 
+// Cached snapshots for useSyncExternalStore (must return same reference if unchanged)
+type PitchSnapshot = {
+  readonly currentPitch: PitchData;
+  readonly pitchHistory: readonly PitchHistoryEntry[];
+  readonly timestamp: number;
+};
+
+const DEFAULT_PITCH_SNAPSHOT: PitchSnapshot = {
+  currentPitch: DEFAULT_PITCH,
+  pitchHistory: [],
+  timestamp: Date.now(),
+};
+
+let pitchSnapshot: PitchSnapshot = DEFAULT_PITCH_SNAPSHOT;
+
 // Listener management - separate listeners for different data
 type ListenerSet = Set<() => void>;
 const isActiveListeners: ListenerSet = new Set();
@@ -263,6 +278,12 @@ function updateState(partial: Partial<AudioCaptureState>): void {
     partial.pitchHistory !== undefined ||
     partial.pitchTimestamp !== undefined
   ) {
+    // Update cached pitch snapshot
+    pitchSnapshot = {
+      currentPitch: state.currentPitch,
+      pitchHistory: state.pitchHistory,
+      timestamp: state.pitchTimestamp,
+    };
     notifyListeners(pitchListeners);
   }
   if (partial.volumeLevel !== undefined) {
@@ -486,23 +507,11 @@ export function useIsActive(): boolean {
  * Hook to subscribe to pitch data only.
  * Re-renders every frame when active.
  */
-export function usePitchData(): {
-  readonly currentPitch: PitchData;
-  readonly pitchHistory: readonly PitchHistoryEntry[];
-  readonly timestamp: number;
-} {
+export function usePitchData(): PitchSnapshot {
   return useSyncExternalStore(
     subscribePitch,
-    () => ({
-      currentPitch: state.currentPitch,
-      pitchHistory: state.pitchHistory,
-      timestamp: state.pitchTimestamp,
-    }),
-    () => ({
-      currentPitch: DEFAULT_PITCH,
-      pitchHistory: [],
-      timestamp: Date.now(),
-    }),
+    () => pitchSnapshot,
+    () => DEFAULT_PITCH_SNAPSHOT,
   );
 }
 
