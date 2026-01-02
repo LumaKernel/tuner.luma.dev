@@ -187,22 +187,56 @@ function calculateChannelVolume(data: Float32Array): ChannelVolume {
   return { rms, dB, peak, peakDb };
 }
 
+// Stereo detection state - determined once per stream, not per frame
+let isStereoDetected: boolean | null = null;
+let stereoCheckFrameCount = 0;
+const STEREO_CHECK_FRAMES = 10; // Check for this many frames before finalizing
+
+function checkIsStereo(left: Float32Array, right: Float32Array): boolean {
+  // Check more samples with a slightly higher threshold for robustness
+  const checkSamples = Math.min(200, left.length);
+  let diffCount = 0;
+  const threshold = 0.005; // Slightly higher threshold to avoid noise-triggered changes
+
+  for (let i = 0; i < checkSamples; i += 5) {
+    if (Math.abs(left[i] - right[i]) > threshold) {
+      diffCount++;
+    }
+  }
+
+  // Consider stereo if more than 10% of samples differ significantly
+  return diffCount > checkSamples / 50;
+}
+
 function calculateVolumeLevel(stereoData: StereoAudioData): VolumeLevelData {
   const left = calculateChannelVolume(stereoData.left);
   const right = calculateChannelVolume(stereoData.right);
   const mono = calculateChannelVolume(stereoData.mono);
 
-  // Check if actually stereo by comparing samples
-  let isStereo = false;
-  const checkSamples = Math.min(100, stereoData.left.length);
-  for (let i = 0; i < checkSamples; i += 10) {
-    if (Math.abs(stereoData.left[i] - stereoData.right[i]) > 0.001) {
+  // Only check stereo in first few frames after stream start, then cache result
+  let isStereo = isStereoDetected ?? false;
+
+  if (isStereoDetected === null) {
+    stereoCheckFrameCount++;
+    const currentCheck = checkIsStereo(stereoData.left, stereoData.right);
+
+    if (currentCheck) {
+      // If any frame shows stereo, mark as stereo immediately
+      isStereoDetected = true;
       isStereo = true;
-      break;
+    } else if (stereoCheckFrameCount >= STEREO_CHECK_FRAMES) {
+      // After checking enough frames without stereo detection, mark as mono
+      isStereoDetected = false;
+      isStereo = false;
     }
   }
 
   return { left, right, mono, isStereo };
+}
+
+function resetStereoDetection(): void {
+  isStereoDetected = null;
+  stereoCheckFrameCount = 0;
 }
 
 const DEFAULT_VOLUME: VolumeLevelData = {
@@ -430,8 +464,9 @@ async function startAudio(deviceId?: string): Promise<void> {
     animationFrameId: null,
   };
 
-  // Reset pitch history
+  // Reset pitch history and stereo detection for new stream
   pitchHistory = [];
+  resetStereoDetection();
 
   updateState({
     isActive: true,
