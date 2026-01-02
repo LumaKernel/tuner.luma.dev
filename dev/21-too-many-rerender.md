@@ -37,3 +37,5 @@ ultrathink
 magic numberどうにかしたほうがよさそう。全体的にね。 ultrathink
 
 
+bpm設定画面には+- 100/10/1/0.1/0.01 のボタンも用意しよう。 ultrathink
+

@@ -14,6 +14,12 @@ import type {
   Temperament,
 } from "@/types";
 import { DEFAULT_ADVANCED_SETTINGS } from "@/types";
+import {
+  BPM_PRESETS_DEFAULT,
+  BPM_MIN,
+  BPM_MAX,
+  BPM_PRESETS_MAX_COUNT,
+} from "@/constants/audio";
 
 const STORAGE_KEY = "tuner-settings";
 
@@ -24,6 +30,7 @@ const defaultSettings: Settings = {
   autoStart: false,
   audioFormat: "wav",
   advanced: DEFAULT_ADVANCED_SETTINGS,
+  bpmPresets: BPM_PRESETS_DEFAULT,
 };
 
 const VALID_TRANSPOSITIONS: readonly Transposition[] = [
@@ -74,6 +81,21 @@ function sanitizeAdvancedSettings(parsed: unknown): AdvancedSettings {
   };
 }
 
+// Validate and sanitize bpm presets
+function sanitizeBpmPresets(parsed: unknown): readonly number[] {
+  if (!Array.isArray(parsed)) {
+    return defaultSettings.bpmPresets;
+  }
+
+  const validPresets = parsed
+    .filter(
+      (v): v is number => typeof v === "number" && v >= BPM_MIN && v <= BPM_MAX,
+    )
+    .slice(0, BPM_PRESETS_MAX_COUNT);
+
+  return validPresets.length > 0 ? validPresets : defaultSettings.bpmPresets;
+}
+
 // Validate and sanitize loaded settings
 function sanitizeSettings(parsed: unknown): Settings {
   if (typeof parsed !== "object" || parsed === null) {
@@ -104,6 +126,7 @@ function sanitizeSettings(parsed: unknown): Settings {
         ? obj.audioFormat
         : defaultSettings.audioFormat,
     advanced: sanitizeAdvancedSettings(obj.advanced),
+    bpmPresets: sanitizeBpmPresets(obj.bpmPresets),
   };
 }
 

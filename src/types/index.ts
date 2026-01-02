@@ -87,6 +87,7 @@ export type Settings = {
   readonly autoStart: boolean; // 次回から自動で開始する
   readonly audioFormat: AudioFormat; // 保存・ダウンロード形式
   readonly advanced: AdvancedSettings; // 高度な設定
+  readonly bpmPresets: readonly number[]; // BPMプリセット
 };
 
 export type Recording = {

@@ -6,6 +6,9 @@ import {
   RotateCcw,
   ChevronDown,
   ChevronUp,
+  Settings,
+  Plus,
+  X,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,11 +40,14 @@ import {
   type TuningOptions,
 } from "@/lib/noteUtils";
 import type { Notation, Accidental, AdvancedSettings } from "@/types";
+import { useSettings } from "@/hooks/useSettings";
 import {
   BPM_MIN,
   BPM_MAX,
   BPM_DEFAULT,
   BPM_SLIDER_MAX,
+  BPM_PRESETS_DEFAULT,
+  BPM_PRESETS_MAX_COUNT,
   VOLUME_MIN,
   VOLUME_MAX,
   VOLUME_STEP,
@@ -100,6 +106,9 @@ type BpmInputModalProps = {
   readonly onBpmChange: (bpm: number) => void;
 };
 
+// BPM adjustment steps
+const BPM_STEPS = [100, 10, 1, 0.1, 0.01] as const;
+
 const BpmInputModal = memo(function BpmInputModal({
   open,
   onClose,
@@ -127,6 +136,22 @@ const BpmInputModal = memo(function BpmInputModal({
     [],
   );
 
+  const handleAdjust = useCallback(
+    (delta: number) => {
+      const current = parseFloat(inputValue);
+      if (Number.isNaN(current)) return;
+
+      const newValue = Math.max(BPM_MIN, Math.min(BPM_MAX, current + delta));
+      // Round to avoid floating point errors
+      const rounded =
+        Math.abs(delta) < 1
+          ? Math.round(newValue * 100) / 100
+          : Math.round(newValue * 10) / 10;
+      setInputValue(rounded.toString());
+    },
+    [inputValue],
+  );
+
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
@@ -144,9 +169,11 @@ const BpmInputModal = memo(function BpmInputModal({
     return !Number.isNaN(parsed) && parsed >= BPM_MIN && parsed <= BPM_MAX;
   }, [inputValue]);
 
+  const currentParsed = parseFloat(inputValue);
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-xs">
+      <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>BPM設定</DialogTitle>
         </DialogHeader>
@@ -167,6 +194,49 @@ const BpmInputModal = memo(function BpmInputModal({
               autoFocus
             />
           </div>
+
+          {/* Adjustment buttons */}
+          <div className="space-y-2">
+            {/* Plus buttons */}
+            <div className="flex gap-1">
+              {BPM_STEPS.map((step) => (
+                <Button
+                  key={`plus-${step}`}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 text-xs"
+                  onClick={() => handleAdjust(step)}
+                  disabled={
+                    Number.isNaN(currentParsed) ||
+                    currentParsed + step > BPM_MAX
+                  }
+                >
+                  +{step}
+                </Button>
+              ))}
+            </div>
+            {/* Minus buttons */}
+            <div className="flex gap-1">
+              {BPM_STEPS.map((step) => (
+                <Button
+                  key={`minus-${step}`}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 text-xs"
+                  onClick={() => handleAdjust(-step)}
+                  disabled={
+                    Number.isNaN(currentParsed) ||
+                    currentParsed - step < BPM_MIN
+                  }
+                >
+                  -{step}
+                </Button>
+              ))}
+            </div>
+          </div>
+
           <div className="flex gap-2">
             <Button
               type="button"
@@ -186,6 +256,236 @@ const BpmInputModal = memo(function BpmInputModal({
   );
 });
 
+/**
+ * BPM presets settings modal for customizing preset values.
+ */
+type BpmPresetsSettingsModalProps = {
+  readonly open: boolean;
+  readonly onClose: () => void;
+  readonly presets: readonly number[];
+  readonly onPresetsChange: (presets: readonly number[]) => void;
+};
+
+const BpmPresetsSettingsModal = memo(function BpmPresetsSettingsModal({
+  open,
+  onClose,
+  presets,
+  onPresetsChange,
+}: BpmPresetsSettingsModalProps) {
+  const [editingPresets, setEditingPresets] = useState<readonly number[]>([]);
+  const [newPresetValue, setNewPresetValue] = useState("");
+
+  // Reset editing state when modal opens
+  const handleOpenChange = useCallback(
+    (isOpen: boolean) => {
+      if (isOpen) {
+        setEditingPresets(presets);
+        setNewPresetValue("");
+      } else {
+        onClose();
+      }
+    },
+    [presets, onClose],
+  );
+
+  const handleAddPreset = useCallback(() => {
+    const parsed = parseFloat(newPresetValue);
+    if (
+      !Number.isNaN(parsed) &&
+      parsed >= BPM_MIN &&
+      parsed <= BPM_MAX &&
+      editingPresets.length < BPM_PRESETS_MAX_COUNT &&
+      !editingPresets.includes(parsed)
+    ) {
+      // Round to avoid floating point errors and sort
+      const rounded = Math.round(parsed * 100) / 100;
+      const newPresets = [...editingPresets, rounded].sort((a, b) => a - b);
+      setEditingPresets(newPresets);
+      setNewPresetValue("");
+    }
+  }, [newPresetValue, editingPresets]);
+
+  const handleRemovePreset = useCallback((presetToRemove: number) => {
+    setEditingPresets((current) => current.filter((p) => p !== presetToRemove));
+  }, []);
+
+  const handleResetToDefault = useCallback(() => {
+    setEditingPresets(BPM_PRESETS_DEFAULT);
+  }, []);
+
+  const handleSave = useCallback(() => {
+    onPresetsChange(editingPresets);
+    onClose();
+  }, [editingPresets, onPresetsChange, onClose]);
+
+  const isNewPresetValid = useMemo(() => {
+    const parsed = parseFloat(newPresetValue);
+    return (
+      !Number.isNaN(parsed) &&
+      parsed >= BPM_MIN &&
+      parsed <= BPM_MAX &&
+      !editingPresets.includes(parsed)
+    );
+  }, [newPresetValue, editingPresets]);
+
+  const canAddMore = editingPresets.length < BPM_PRESETS_MAX_COUNT;
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>BPMプリセット設定</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          {/* Current presets */}
+          <div className="space-y-2">
+            <Label>現在のプリセット</Label>
+            <div className="flex flex-wrap gap-2">
+              {editingPresets.length === 0 ? (
+                <span className="text-muted-foreground text-sm">
+                  プリセットがありません
+                </span>
+              ) : (
+                editingPresets.map((preset) => (
+                  <div
+                    key={preset}
+                    className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md"
+                  >
+                    <span className="text-sm font-mono">
+                      {Number.isInteger(preset) ? preset : preset.toFixed(1)}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-4 w-4 p-0"
+                      onClick={() => handleRemovePreset(preset)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Add new preset */}
+          {canAddMore && (
+            <div className="space-y-2">
+              <Label>新しいプリセットを追加</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  min={BPM_MIN}
+                  max={BPM_MAX}
+                  step="any"
+                  value={newPresetValue}
+                  onChange={(e) => setNewPresetValue(e.target.value)}
+                  placeholder={`${BPM_MIN}〜${BPM_MAX}`}
+                  className="flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (isNewPresetValid) {
+                        handleAddPreset();
+                      }
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleAddPreset}
+                  disabled={!isNewPresetValid}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                最大{BPM_PRESETS_MAX_COUNT}個まで設定できます（現在
+                {editingPresets.length}個）
+              </p>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleResetToDefault}
+              className="flex-1"
+            >
+              <RotateCcw className="h-3 w-3 mr-1" />
+              初期値に戻す
+            </Button>
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={onClose}
+            >
+              キャンセル
+            </Button>
+            <Button
+              type="button"
+              className="flex-1"
+              onClick={handleSave}
+              disabled={editingPresets.length === 0}
+            >
+              保存
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+});
+
+/**
+ * BPM preset buttons component.
+ */
+type BpmPresetButtonsProps = {
+  readonly presets: readonly number[];
+  readonly currentBpm: number;
+  readonly onBpmSelect: (bpm: number) => void;
+  readonly onSettingsClick: () => void;
+};
+
+const BpmPresetButtons = memo(function BpmPresetButtons({
+  presets,
+  currentBpm,
+  onBpmSelect,
+  onSettingsClick,
+}: BpmPresetButtonsProps) {
+  return (
+    <div className="flex flex-wrap gap-1">
+      {presets.map((preset) => (
+        <Button
+          key={preset}
+          variant={preset === currentBpm ? "default" : "outline"}
+          size="sm"
+          className="h-7 px-2 text-xs font-mono"
+          onClick={() => onBpmSelect(preset)}
+        >
+          {Number.isInteger(preset) ? preset : preset.toFixed(1)}
+        </Button>
+      ))}
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-7 w-7 p-0"
+        onClick={onSettingsClick}
+      >
+        <Settings className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+});
+
 export const AudioToolsPanel = memo(function AudioToolsPanel({
   notation,
   accidental,
@@ -194,6 +494,10 @@ export const AudioToolsPanel = memo(function AudioToolsPanel({
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedMidi, setSelectedMidi] = useState(MIDI_A4);
   const [isBpmModalOpen, setIsBpmModalOpen] = useState(false);
+  const [isPresetsModalOpen, setIsPresetsModalOpen] = useState(false);
+
+  // Get BPM presets from settings
+  const { state: settings, update: updateSettings } = useSettings();
 
   const tuningOptions: TuningOptions = useMemo(
     () => ({
@@ -275,6 +579,15 @@ export const AudioToolsPanel = memo(function AudioToolsPanel({
   const resetBpm = useCallback(() => {
     metronome.setBpm(BPM_DEFAULT);
   }, [metronome]);
+
+  const handlePresetsChange = useCallback(
+    (presets: readonly number[]) => {
+      updateSettings((draft) => {
+        draft.bpmPresets = [...presets];
+      });
+    },
+    [updateSettings],
+  );
 
   const noteNames = useMemo(
     () => getNoteNames(notation, accidental),
@@ -506,6 +819,22 @@ export const AudioToolsPanel = memo(function AudioToolsPanel({
                   <RotateCcw className="h-3 w-3" />
                 </Button>
               </div>
+
+              {/* BPM Presets */}
+              <BpmPresetButtons
+                presets={settings.bpmPresets}
+                currentBpm={metronome.bpm}
+                onBpmSelect={metronome.setBpm}
+                onSettingsClick={() => setIsPresetsModalOpen(true)}
+              />
+
+              {/* BPM Presets Settings Modal */}
+              <BpmPresetsSettingsModal
+                open={isPresetsModalOpen}
+                onClose={() => setIsPresetsModalOpen(false)}
+                presets={settings.bpmPresets}
+                onPresetsChange={handlePresetsChange}
+              />
             </div>
           </div>
         )}

@@ -6,6 +6,10 @@ export const BPM_MIN = 20;
 export const BPM_MAX = 999;
 export const BPM_SLIDER_MAX = 300; // Slider uses lower max for usability
 export const BPM_DEFAULT = 120;
+export const BPM_PRESETS_DEFAULT: readonly number[] = [
+  80, 90, 100, 110, 120, 140,
+];
+export const BPM_PRESETS_MAX_COUNT = 10; // Maximum number of presets
 
 // ============================================================================
 // Volume Constants
