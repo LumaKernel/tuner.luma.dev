@@ -22,3 +22,7 @@ ultrathink
 ultrathink
 
 
+マイクの切り替えで最初の開始前の画面が一瞬見えるようになってしまった。
+ultrathink
+
+

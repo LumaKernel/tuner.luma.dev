@@ -11,6 +11,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -66,6 +73,100 @@ const MetronomeBeatIndicator = memo(function MetronomeBeatIndicator() {
   );
 });
 
+/**
+ * BPM input modal for precise BPM entry with decimal support.
+ */
+type BpmInputModalProps = {
+  readonly open: boolean;
+  readonly onClose: () => void;
+  readonly currentBpm: number;
+  readonly onBpmChange: (bpm: number) => void;
+};
+
+const BpmInputModal = memo(function BpmInputModal({
+  open,
+  onClose,
+  currentBpm,
+  onBpmChange,
+}: BpmInputModalProps) {
+  const [inputValue, setInputValue] = useState(() => currentBpm.toString());
+
+  // Reset input value when modal opens
+  const handleOpenChange = useCallback(
+    (isOpen: boolean) => {
+      if (isOpen) {
+        setInputValue(currentBpm.toString());
+      } else {
+        onClose();
+      }
+    },
+    [currentBpm, onClose],
+  );
+
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setInputValue(e.target.value);
+    },
+    [],
+  );
+
+  const handleSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      const parsed = parseFloat(inputValue);
+      if (!Number.isNaN(parsed) && parsed >= 20 && parsed <= 300) {
+        onBpmChange(parsed);
+        onClose();
+      }
+    },
+    [inputValue, onBpmChange, onClose],
+  );
+
+  const isValid = useMemo(() => {
+    const parsed = parseFloat(inputValue);
+    return !Number.isNaN(parsed) && parsed >= 20 && parsed <= 300;
+  }, [inputValue]);
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-xs">
+        <DialogHeader>
+          <DialogTitle>BPM設定</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="bpm-input">BPM (20〜300)</Label>
+            <Input
+              id="bpm-input"
+              type="number"
+              min={20}
+              max={300}
+              step="any"
+              value={inputValue}
+              onChange={handleInputChange}
+              className="text-center text-lg"
+              autoFocus
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={onClose}
+            >
+              キャンセル
+            </Button>
+            <Button type="submit" className="flex-1" disabled={!isValid}>
+              設定
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+});
+
 export const AudioToolsPanel = memo(function AudioToolsPanel({
   notation,
   accidental,
@@ -73,6 +174,7 @@ export const AudioToolsPanel = memo(function AudioToolsPanel({
 }: AudioToolsPanelProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedMidi, setSelectedMidi] = useState(69); // A4
+  const [isBpmModalOpen, setIsBpmModalOpen] = useState(false);
 
   const tuningOptions: TuningOptions = useMemo(
     () => ({
@@ -331,9 +433,16 @@ export const AudioToolsPanel = memo(function AudioToolsPanel({
                   step={1}
                   className="flex-1"
                 />
-                <span className="text-xs font-mono w-10 text-right">
-                  {metronome.bpm}
-                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsBpmModalOpen(true)}
+                  className="h-6 w-12 px-1 text-xs font-mono"
+                >
+                  {Number.isInteger(metronome.bpm)
+                    ? metronome.bpm
+                    : metronome.bpm.toFixed(1)}
+                </Button>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -344,6 +453,14 @@ export const AudioToolsPanel = memo(function AudioToolsPanel({
                   <RotateCcw className="h-3 w-3" />
                 </Button>
               </div>
+
+              {/* BPM Input Modal */}
+              <BpmInputModal
+                open={isBpmModalOpen}
+                onClose={() => setIsBpmModalOpen(false)}
+                currentBpm={metronome.bpm}
+                onBpmChange={metronome.setBpm}
+              />
 
               {/* Volume */}
               <div className="flex items-center gap-2">
