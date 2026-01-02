@@ -106,25 +106,22 @@ type BpmInputModalProps = {
 // BPM adjustment steps
 const BPM_STEPS = [100, 10, 1, 0.1, 0.01] as const;
 
-const BpmInputModal = memo(function BpmInputModal({
-  open,
-  onClose,
-  currentBpm,
-  onBpmChange,
-}: BpmInputModalProps) {
-  const [inputValue, setInputValue] = useState(() => currentBpm.toString());
+/**
+ * Inner content component that mounts fresh each time the modal opens.
+ * This ensures useState initial value is evaluated correctly.
+ */
+type BpmInputModalContentProps = {
+  readonly initialBpm: number;
+  readonly onBpmChange: (bpm: number) => void;
+  readonly onClose: () => void;
+};
 
-  // Reset input value when modal opens
-  const handleOpenChange = useCallback(
-    (isOpen: boolean) => {
-      if (isOpen) {
-        setInputValue(currentBpm.toString());
-      } else {
-        onClose();
-      }
-    },
-    [currentBpm, onClose],
-  );
+const BpmInputModalContent = memo(function BpmInputModalContent({
+  initialBpm,
+  onBpmChange,
+  onClose,
+}: BpmInputModalContentProps) {
+  const [inputValue, setInputValue] = useState(() => initialBpm.toString());
 
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -169,85 +166,115 @@ const BpmInputModal = memo(function BpmInputModal({
   const currentParsed = parseFloat(inputValue);
 
   return (
+    <>
+      <DialogHeader>
+        <DialogTitle>BPM設定</DialogTitle>
+      </DialogHeader>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="bpm-input">
+            BPM ({BPM_MIN}〜{BPM_MAX})
+          </Label>
+          <Input
+            id="bpm-input"
+            type="number"
+            min={BPM_MIN}
+            max={BPM_MAX}
+            step="any"
+            value={inputValue}
+            onChange={handleInputChange}
+            className="text-center text-lg"
+            autoFocus
+          />
+        </div>
+
+        {/* Adjustment buttons */}
+        <div className="space-y-2">
+          {/* Plus buttons */}
+          <div className="flex gap-1">
+            {BPM_STEPS.map((step) => (
+              <Button
+                key={`plus-${step}`}
+                type="button"
+                variant="outline"
+                size="sm"
+                className="flex-1 text-xs"
+                onClick={() => handleAdjust(step)}
+                disabled={
+                  Number.isNaN(currentParsed) || currentParsed + step > BPM_MAX
+                }
+              >
+                +{step}
+              </Button>
+            ))}
+          </div>
+          {/* Minus buttons */}
+          <div className="flex gap-1">
+            {BPM_STEPS.map((step) => (
+              <Button
+                key={`minus-${step}`}
+                type="button"
+                variant="outline"
+                size="sm"
+                className="flex-1 text-xs"
+                onClick={() => handleAdjust(-step)}
+                disabled={
+                  Number.isNaN(currentParsed) || currentParsed - step < BPM_MIN
+                }
+              >
+                -{step}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="flex-1"
+            onClick={onClose}
+          >
+            キャンセル
+          </Button>
+          <Button type="submit" className="flex-1" disabled={!isValid}>
+            設定
+          </Button>
+        </div>
+      </form>
+    </>
+  );
+});
+
+/**
+ * BPM input modal wrapper - handles Dialog open/close state.
+ * Content only mounts when open=true, ensuring fresh initial state.
+ */
+const BpmInputModal = memo(function BpmInputModal({
+  open,
+  onClose,
+  currentBpm,
+  onBpmChange,
+}: BpmInputModalProps) {
+  const handleOpenChange = useCallback(
+    (isOpen: boolean) => {
+      if (!isOpen) {
+        onClose();
+      }
+    },
+    [onClose],
+  );
+
+  return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>BPM設定</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="bpm-input">
-              BPM ({BPM_MIN}〜{BPM_MAX})
-            </Label>
-            <Input
-              id="bpm-input"
-              type="number"
-              min={BPM_MIN}
-              max={BPM_MAX}
-              step="any"
-              value={inputValue}
-              onChange={handleInputChange}
-              className="text-center text-lg"
-              autoFocus
-            />
-          </div>
-
-          {/* Adjustment buttons */}
-          <div className="space-y-2">
-            {/* Plus buttons */}
-            <div className="flex gap-1">
-              {BPM_STEPS.map((step) => (
-                <Button
-                  key={`plus-${step}`}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 text-xs"
-                  onClick={() => handleAdjust(step)}
-                  disabled={
-                    Number.isNaN(currentParsed) ||
-                    currentParsed + step > BPM_MAX
-                  }
-                >
-                  +{step}
-                </Button>
-              ))}
-            </div>
-            {/* Minus buttons */}
-            <div className="flex gap-1">
-              {BPM_STEPS.map((step) => (
-                <Button
-                  key={`minus-${step}`}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 text-xs"
-                  onClick={() => handleAdjust(-step)}
-                  disabled={
-                    Number.isNaN(currentParsed) ||
-                    currentParsed - step < BPM_MIN
-                  }
-                >
-                  -{step}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1"
-              onClick={onClose}
-            >
-              キャンセル
-            </Button>
-            <Button type="submit" className="flex-1" disabled={!isValid}>
-              設定
-            </Button>
-          </div>
-        </form>
+        {open && (
+          <BpmInputModalContent
+            initialBpm={currentBpm}
+            onBpmChange={onBpmChange}
+            onClose={onClose}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -265,126 +292,155 @@ type BpmPresetsSettingsModalProps = {
   readonly onPresetsChange: (presets: readonly number[]) => void;
 };
 
+/**
+ * Inner content component that mounts fresh each time the modal opens.
+ */
+type BpmPresetsSettingsModalContentProps = {
+  readonly initialPresets: readonly number[];
+  readonly onPresetsChange: (presets: readonly number[]) => void;
+  readonly onClose: () => void;
+};
+
+const BpmPresetsSettingsModalContent = memo(
+  function BpmPresetsSettingsModalContent({
+    initialPresets,
+    onPresetsChange,
+    onClose,
+  }: BpmPresetsSettingsModalContentProps) {
+    const [editingPresets, setEditingPresets] = useState<readonly number[]>(
+      () => [...initialPresets],
+    );
+    const [editingIndex, setEditingIndex] = useState<number | null>(null);
+
+    const handlePresetClick = useCallback((index: number) => {
+      setEditingIndex(index);
+    }, []);
+
+    const handlePresetChange = useCallback(
+      (newBpm: number) => {
+        setEditingPresets((current) => {
+          const newPresets = [...current];
+          if (editingIndex !== null) {
+            newPresets[editingIndex] = newBpm;
+          }
+          return newPresets;
+        });
+        setEditingIndex(null);
+      },
+      [editingIndex],
+    );
+
+    const handleResetToDefault = useCallback(() => {
+      setEditingPresets([...BPM_PRESETS_DEFAULT]);
+    }, []);
+
+    const handleSave = useCallback(() => {
+      const sortedPresets = [...editingPresets].sort((a, b) => a - b);
+      onPresetsChange(sortedPresets);
+      onClose();
+    }, [editingPresets, onPresetsChange, onClose]);
+
+    const currentEditingBpm =
+      editingIndex !== null ? editingPresets[editingIndex] : 0;
+
+    return (
+      <>
+        <DialogHeader>
+          <DialogTitle>BPMプリセット設定</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          {/* Preset buttons */}
+          <div className="space-y-2">
+            <Label>プリセット値（クリックで編集）</Label>
+            <div className="grid grid-cols-3 gap-2">
+              {editingPresets.map((preset, index) => (
+                <Button
+                  key={index}
+                  variant="outline"
+                  className="h-10 font-mono"
+                  onClick={() => handlePresetClick(index)}
+                >
+                  {Number.isInteger(preset) ? preset : preset.toFixed(1)}
+                </Button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              保存時に自動でソートされます
+            </p>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleResetToDefault}
+              className="flex-1"
+            >
+              <RotateCcw className="h-3 w-3 mr-1" />
+              初期値に戻す
+            </Button>
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={onClose}
+            >
+              キャンセル
+            </Button>
+            <Button type="button" className="flex-1" onClick={handleSave}>
+              保存
+            </Button>
+          </div>
+        </div>
+
+        {/* BPM Input Modal for editing individual preset */}
+        <BpmInputModal
+          open={editingIndex !== null}
+          onClose={() => setEditingIndex(null)}
+          currentBpm={currentEditingBpm}
+          onBpmChange={handlePresetChange}
+        />
+      </>
+    );
+  },
+);
+
+/**
+ * BPM presets settings modal wrapper - handles Dialog open/close state.
+ * Content only mounts when open=true, ensuring fresh initial state.
+ */
 const BpmPresetsSettingsModal = memo(function BpmPresetsSettingsModal({
   open,
   onClose,
   presets,
   onPresetsChange,
 }: BpmPresetsSettingsModalProps) {
-  const [editingPresets, setEditingPresets] = useState<readonly number[]>([]);
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-
-  // Reset editing state when modal opens
   const handleOpenChange = useCallback(
     (isOpen: boolean) => {
-      if (isOpen) {
-        setEditingPresets(presets);
-        setEditingIndex(null);
-      } else {
+      if (!isOpen) {
         onClose();
       }
     },
-    [presets, onClose],
+    [onClose],
   );
-
-  const handlePresetClick = useCallback((index: number) => {
-    setEditingIndex(index);
-  }, []);
-
-  const handlePresetChange = useCallback(
-    (newBpm: number) => {
-      setEditingPresets((current) => {
-        const newPresets = [...current];
-        if (editingIndex !== null) {
-          newPresets[editingIndex] = newBpm;
-        }
-        return newPresets;
-      });
-      setEditingIndex(null);
-    },
-    [editingIndex],
-  );
-
-  const handleResetToDefault = useCallback(() => {
-    setEditingPresets([...BPM_PRESETS_DEFAULT]);
-  }, []);
-
-  const handleSave = useCallback(() => {
-    const sortedPresets = [...editingPresets].sort((a, b) => a - b);
-    onPresetsChange(sortedPresets);
-    onClose();
-  }, [editingPresets, onPresetsChange, onClose]);
-
-  const currentEditingBpm =
-    editingIndex !== null ? editingPresets[editingIndex] : 0;
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-xs">
-          <DialogHeader>
-            <DialogTitle>BPMプリセット設定</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {/* Preset buttons */}
-            <div className="space-y-2">
-              <Label>プリセット値（クリックで編集）</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {editingPresets.map((preset, index) => (
-                  <Button
-                    key={index}
-                    variant="outline"
-                    className="h-10 font-mono"
-                    onClick={() => handlePresetClick(index)}
-                  >
-                    {Number.isInteger(preset) ? preset : preset.toFixed(1)}
-                  </Button>
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                保存時に自動でソートされます
-              </p>
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleResetToDefault}
-                className="flex-1"
-              >
-                <RotateCcw className="h-3 w-3 mr-1" />
-                初期値に戻す
-              </Button>
-            </div>
-
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
-                onClick={onClose}
-              >
-                キャンセル
-              </Button>
-              <Button type="button" className="flex-1" onClick={handleSave}>
-                保存
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* BPM Input Modal for editing individual preset */}
-      <BpmInputModal
-        open={editingIndex !== null}
-        onClose={() => setEditingIndex(null)}
-        currentBpm={currentEditingBpm}
-        onBpmChange={handlePresetChange}
-      />
-    </>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-xs">
+        {open && (
+          <BpmPresetsSettingsModalContent
+            initialPresets={presets}
+            onPresetsChange={onPresetsChange}
+            onClose={onClose}
+          />
+        )}
+      </DialogContent>
+    </Dialog>
   );
 });
 
