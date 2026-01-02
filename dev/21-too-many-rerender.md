@@ -12,3 +12,13 @@ usePitchData	@	useAudioCapture.ts:494
 TunerDisplayContainer2	@	App.tsx:106
 react-dom_client.js?v=0652998c:3526 Uncaught Error: Maximum update depth exceeded. This can happen when a component repeatedly calls setState inside componentWillUpdate or componentDidUpdate. React limits the number of nested updates to prevent infinite loops.
 ultrathink
+
+
+メトロノームのリレンダも音声ツール全体をリレンダしてしまっててスクロールなどに影響を与えているね。
+ultrathink
+
+
+メトロノームのBPMはテキストインプット的にも入力できて、そちらでは小数点以下まで指定できるようにしてほしい。数値のところがボタンになって、モーダルが専用で開いたほうがいいかも。
+ultrathink
+
+

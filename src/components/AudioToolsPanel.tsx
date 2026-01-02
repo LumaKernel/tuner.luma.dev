@@ -23,7 +23,7 @@ import {
   type WaveformType,
   WAVEFORM_LABELS,
 } from "@/hooks/useReferenceSound";
-import { useMetronome } from "@/hooks/useMetronome";
+import { useMetronomeControl, useMetronomeBeat } from "@/hooks/useMetronome";
 import {
   midiToFrequency,
   getNoteNames,
@@ -46,6 +46,25 @@ const NOTE_OPTIONS = Array.from({ length: 61 }, (_, i) => {
 const DEFAULT_REFERENCE_VOLUME = 0.3;
 const DEFAULT_METRONOME_VOLUME = 0.5;
 const DEFAULT_BPM = 120;
+
+/**
+ * Beat indicator component - only re-renders on beat changes.
+ */
+const MetronomeBeatIndicator = memo(function MetronomeBeatIndicator() {
+  const beat = useMetronomeBeat();
+  return (
+    <div className="flex gap-1">
+      {[0, 1, 2, 3].map((i) => (
+        <div
+          key={i}
+          className={`w-2 h-2 rounded-full transition-colors ${
+            beat === i ? "bg-green-500" : "bg-muted"
+          }`}
+        />
+      ))}
+    </div>
+  );
+});
 
 export const AudioToolsPanel = memo(function AudioToolsPanel({
   notation,
@@ -74,7 +93,7 @@ export const AudioToolsPanel = memo(function AudioToolsPanel({
     "sine",
     DEFAULT_REFERENCE_VOLUME,
   );
-  const metronome = useMetronome(DEFAULT_BPM, DEFAULT_METRONOME_VOLUME);
+  const metronome = useMetronomeControl();
 
   // Update oscillator frequency when note or tuning changes
   const handleNoteChange = useCallback(
@@ -280,18 +299,7 @@ export const AudioToolsPanel = memo(function AudioToolsPanel({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Label className="text-sm font-medium">メトロノーム</Label>
-                  {metronome.isPlaying && (
-                    <div className="flex gap-1">
-                      {[0, 1, 2, 3].map((i) => (
-                        <div
-                          key={i}
-                          className={`w-2 h-2 rounded-full transition-colors ${
-                            metronome.beat === i ? "bg-green-500" : "bg-muted"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  )}
+                  {metronome.isPlaying && <MetronomeBeatIndicator />}
                 </div>
                 <Button
                   variant={metronome.isPlaying ? "destructive" : "default"}
