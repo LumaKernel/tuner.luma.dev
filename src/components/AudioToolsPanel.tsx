@@ -37,6 +37,7 @@ import {
   getNoteNames,
   type TuningOptions,
 } from "@/lib/noteUtils";
+import { adjustBpm, isValidBpm } from "@/lib/bpmUtils";
 import type { Notation, Accidental, AdvancedSettings } from "@/types";
 import { useSettings } from "@/hooks/useSettings";
 import {
@@ -135,10 +136,8 @@ const BpmInputModalContent = memo(function BpmInputModalContent({
       const current = parseFloat(inputValue);
       if (Number.isNaN(current)) return;
 
-      const newValue = Math.max(BPM_MIN, Math.min(BPM_MAX, current + delta));
-      // Always round to 2 decimal places to preserve precision
-      const rounded = Math.round(newValue * 100) / 100;
-      setInputValue(rounded.toString());
+      const adjusted = adjustBpm(current, delta);
+      setInputValue(adjusted.toString());
     },
     [inputValue],
   );
@@ -147,7 +146,7 @@ const BpmInputModalContent = memo(function BpmInputModalContent({
     (e: React.FormEvent) => {
       e.preventDefault();
       const parsed = parseFloat(inputValue);
-      if (!Number.isNaN(parsed) && parsed >= BPM_MIN && parsed <= BPM_MAX) {
+      if (isValidBpm(parsed)) {
         onBpmChange(parsed);
         onClose();
       }
@@ -157,7 +156,7 @@ const BpmInputModalContent = memo(function BpmInputModalContent({
 
   const isValid = useMemo(() => {
     const parsed = parseFloat(inputValue);
-    return !Number.isNaN(parsed) && parsed >= BPM_MIN && parsed <= BPM_MAX;
+    return isValidBpm(parsed);
   }, [inputValue]);
 
   const currentParsed = parseFloat(inputValue);
