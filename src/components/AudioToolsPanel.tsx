@@ -136,11 +136,8 @@ const BpmInputModalContent = memo(function BpmInputModalContent({
       if (Number.isNaN(current)) return;
 
       const newValue = Math.max(BPM_MIN, Math.min(BPM_MAX, current + delta));
-      // Round to avoid floating point errors
-      const rounded =
-        Math.abs(delta) < 1
-          ? Math.round(newValue * 100) / 100
-          : Math.round(newValue * 10) / 10;
+      // Always round to 2 decimal places to preserve precision
+      const rounded = Math.round(newValue * 100) / 100;
       setInputValue(rounded.toString());
     },
     [inputValue],
