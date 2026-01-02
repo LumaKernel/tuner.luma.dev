@@ -114,7 +114,7 @@ const BpmInputModal = memo(function BpmInputModal({
     (e: React.FormEvent) => {
       e.preventDefault();
       const parsed = parseFloat(inputValue);
-      if (!Number.isNaN(parsed) && parsed >= 20 && parsed <= 300) {
+      if (!Number.isNaN(parsed) && parsed >= 20 && parsed <= 999) {
         onBpmChange(parsed);
         onClose();
       }
@@ -124,7 +124,7 @@ const BpmInputModal = memo(function BpmInputModal({
 
   const isValid = useMemo(() => {
     const parsed = parseFloat(inputValue);
-    return !Number.isNaN(parsed) && parsed >= 20 && parsed <= 300;
+    return !Number.isNaN(parsed) && parsed >= 20 && parsed <= 999;
   }, [inputValue]);
 
   return (
@@ -135,12 +135,12 @@ const BpmInputModal = memo(function BpmInputModal({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="bpm-input">BPM (20〜300)</Label>
+            <Label htmlFor="bpm-input">BPM (20〜999)</Label>
             <Input
               id="bpm-input"
               type="number"
               min={20}
-              max={300}
+              max={999}
               step="any"
               value={inputValue}
               onChange={handleInputChange}

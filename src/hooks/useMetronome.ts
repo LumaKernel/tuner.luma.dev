@@ -159,7 +159,7 @@ function toggleMetronome(): void {
 }
 
 function setBpm(newBpm: number): void {
-  updateControlState({ bpm: Math.max(20, Math.min(300, newBpm)) });
+  updateControlState({ bpm: Math.max(20, Math.min(999, newBpm)) });
 }
 
 function setVolume(newVolume: number): void {
