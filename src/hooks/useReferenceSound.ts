@@ -130,23 +130,12 @@ export function useReferenceSound(
     }
   }, []);
 
-  const setVolume = useCallback(
-    (newVolume: number) => {
-      setVolumeState(newVolume);
-      const resources = resourcesRef.current;
-      if (resources) {
-        // Apply effective volume (0 if muted)
-        const effectiveVolume = muted ? 0 : newVolume;
-        resources.gainNode.gain.setValueAtTime(
-          effectiveVolume,
-          resources.audioContext.currentTime,
-        );
-      }
-    },
-    [muted],
-  );
+  const setVolume = useCallback((newVolume: number) => {
+    setVolumeState(newVolume);
+    // gain is updated via useEffect to avoid duplication
+  }, []);
 
-  // Apply muted state changes to gain
+  // Apply volume and muted state changes to gain (single source of truth)
   useEffect(() => {
     const resources = resourcesRef.current;
     if (resources) {

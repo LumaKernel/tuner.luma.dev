@@ -31,7 +31,11 @@ import {
   type WaveformType,
   WAVEFORM_LABELS,
 } from "@/hooks/useReferenceSound";
-import { useMetronomeControl, useMetronomeBeat } from "@/hooks/useMetronome";
+import {
+  useMetronomeControl,
+  useMetronomeBeat,
+  setMetronomeMuted,
+} from "@/hooks/useMetronome";
 import {
   midiToFrequency,
   getNoteNames,
@@ -520,8 +524,8 @@ export const AudioToolsPanel = memo(function AudioToolsPanel({
 
   // Apply muted state to metronome
   useEffect(() => {
-    metronome.setMuted(muted);
-  }, [muted, metronome]);
+    setMetronomeMuted(muted);
+  }, [muted]);
 
   // Update oscillator frequency when note or tuning changes
   const handleNoteChange = useCallback(

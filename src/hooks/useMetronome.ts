@@ -185,7 +185,7 @@ function setVolume(newVolume: number): void {
   });
 }
 
-function setMuted(muted: boolean): void {
+export function setMetronomeMuted(muted: boolean): void {
   mutedState = muted;
 }
 
@@ -220,7 +220,6 @@ const DEFAULT_CONTROL_STATE: MetronomeControlState = {
 export function useMetronomeControl(): MetronomeControlState & {
   readonly setBpm: (bpm: number) => void;
   readonly setVolume: (volume: number) => void;
-  readonly setMuted: (muted: boolean) => void;
   readonly start: () => void;
   readonly stop: () => void;
   readonly toggle: () => void;
@@ -235,7 +234,6 @@ export function useMetronomeControl(): MetronomeControlState & {
     ...state,
     setBpm,
     setVolume,
-    setMuted,
     start: startMetronome,
     stop: stopMetronome,
     toggle: toggleMetronome,
@@ -269,14 +267,13 @@ export function useMetronome(
   readonly beat: number;
   readonly setBpm: (bpm: number) => void;
   readonly setVolume: (volume: number) => void;
-  readonly setMuted: (muted: boolean) => void;
   readonly start: () => void;
   readonly stop: () => void;
   readonly toggle: () => void;
 } {
   const initializedRef = useRef(false);
 
-  // Initialize with provided values on first use
+  // Initialize with provided values on first mount only
   useEffect(() => {
     if (!initializedRef.current) {
       initializedRef.current = true;
@@ -287,7 +284,8 @@ export function useMetronome(
         setVolume(initialVolume);
       }
     }
-  }, [initialBpm, initialVolume]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally run only on mount
+  }, []);
 
   const control = useMetronomeControl();
   const currentBeat = useMetronomeBeat();
