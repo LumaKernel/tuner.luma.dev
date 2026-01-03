@@ -43,6 +43,9 @@ let controlState: MetronomeControlState = {
 let beat = 0;
 let resources: AudioResources | null = null;
 
+// Muted state (external control, not part of controlState to avoid unnecessary re-renders)
+let mutedState = false;
+
 // Cached snapshots
 let controlSnapshot: MetronomeControlState = controlState;
 
@@ -71,6 +74,9 @@ function updateBeat(newBeat: number): void {
 // ============================================================================
 
 function playClick(audioContext: AudioContext, time: number): void {
+  // Skip audio if muted (but still schedule for timing)
+  if (mutedState) return;
+
   const oscillator = audioContext.createOscillator();
   const gainNode = audioContext.createGain();
 
@@ -179,6 +185,10 @@ function setVolume(newVolume: number): void {
   });
 }
 
+function setMuted(muted: boolean): void {
+  mutedState = muted;
+}
+
 // ============================================================================
 // Subscription Functions
 // ============================================================================
@@ -210,6 +220,7 @@ const DEFAULT_CONTROL_STATE: MetronomeControlState = {
 export function useMetronomeControl(): MetronomeControlState & {
   readonly setBpm: (bpm: number) => void;
   readonly setVolume: (volume: number) => void;
+  readonly setMuted: (muted: boolean) => void;
   readonly start: () => void;
   readonly stop: () => void;
   readonly toggle: () => void;
@@ -224,6 +235,7 @@ export function useMetronomeControl(): MetronomeControlState & {
     ...state,
     setBpm,
     setVolume,
+    setMuted,
     start: startMetronome,
     stop: stopMetronome,
     toggle: toggleMetronome,
@@ -257,6 +269,7 @@ export function useMetronome(
   readonly beat: number;
   readonly setBpm: (bpm: number) => void;
   readonly setVolume: (volume: number) => void;
+  readonly setMuted: (muted: boolean) => void;
   readonly start: () => void;
   readonly stop: () => void;
   readonly toggle: () => void;

@@ -32,6 +32,7 @@ export function useReferenceSound(
   initialFrequency = 440,
   initialWaveform: WaveformType = "sine",
   initialVolume = 0.3,
+  muted = false,
 ): ReferenceSoundState {
   const [isPlaying, setIsPlaying] = useState(false);
   const [frequency, setFrequencyState] = useState(initialFrequency);
@@ -74,12 +75,19 @@ export function useReferenceSound(
     oscillator.type = waveform;
     oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
 
-    // Start with fade in to avoid clicks
+    // Apply effective volume (0 if muted)
+    const effectiveVolume = muted ? 0 : volume;
+
+    // Start with fade in to avoid clicks (use 0.001 minimum for exponential ramp)
     gainNode.gain.setValueAtTime(0.001, audioContext.currentTime);
     gainNode.gain.exponentialRampToValueAtTime(
-      volume,
+      Math.max(effectiveVolume, 0.001),
       audioContext.currentTime + 0.05,
     );
+    // If muted, immediately set to 0 after the ramp
+    if (muted) {
+      gainNode.gain.setValueAtTime(0, audioContext.currentTime + 0.05);
+    }
 
     oscillator.connect(gainNode);
     gainNode.connect(audioContext.destination);
@@ -93,7 +101,7 @@ export function useReferenceSound(
     };
 
     setIsPlaying(true);
-  }, [frequency, waveform, volume]);
+  }, [frequency, waveform, volume, muted]);
 
   const toggle = useCallback(() => {
     if (isPlaying) {
@@ -122,16 +130,33 @@ export function useReferenceSound(
     }
   }, []);
 
-  const setVolume = useCallback((newVolume: number) => {
-    setVolumeState(newVolume);
+  const setVolume = useCallback(
+    (newVolume: number) => {
+      setVolumeState(newVolume);
+      const resources = resourcesRef.current;
+      if (resources) {
+        // Apply effective volume (0 if muted)
+        const effectiveVolume = muted ? 0 : newVolume;
+        resources.gainNode.gain.setValueAtTime(
+          effectiveVolume,
+          resources.audioContext.currentTime,
+        );
+      }
+    },
+    [muted],
+  );
+
+  // Apply muted state changes to gain
+  useEffect(() => {
     const resources = resourcesRef.current;
     if (resources) {
+      const effectiveVolume = muted ? 0 : volume;
       resources.gainNode.gain.setValueAtTime(
-        newVolume,
+        effectiveVolume,
         resources.audioContext.currentTime,
       );
     }
-  }, []);
+  }, [muted, volume]);
 
   // Cleanup on unmount
   useEffect(() => {

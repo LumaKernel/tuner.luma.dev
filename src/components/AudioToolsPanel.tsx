@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, memo } from "react";
+import { useState, useCallback, useMemo, memo, useEffect } from "react";
 import {
   Volume2,
   Play,
@@ -63,6 +63,7 @@ type AudioToolsPanelProps = {
   readonly notation: Notation;
   readonly accidental: Accidental;
   readonly advancedSettings: AdvancedSettings;
+  readonly muted?: boolean;
 };
 
 // Generate note options (C2 to C7)
@@ -485,6 +486,7 @@ export const AudioToolsPanel = memo(function AudioToolsPanel({
   notation,
   accidental,
   advancedSettings,
+  muted = false,
 }: AudioToolsPanelProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedMidi, setSelectedMidi] = useState(MIDI_A4);
@@ -512,8 +514,14 @@ export const AudioToolsPanel = memo(function AudioToolsPanel({
     referenceFrequency,
     "sine",
     VOLUME_DEFAULT_REFERENCE,
+    muted,
   );
   const metronome = useMetronomeControl();
+
+  // Apply muted state to metronome
+  useEffect(() => {
+    metronome.setMuted(muted);
+  }, [muted, metronome]);
 
   // Update oscillator frequency when note or tuning changes
   const handleNoteChange = useCallback(

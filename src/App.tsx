@@ -491,6 +491,7 @@ function TunerApp() {
                   notation={settings.state.notation}
                   accidental={settings.state.accidental}
                   advancedSettings={settings.state.advanced}
+                  muted={isRecordingsOpen}
                 />
               </>
             )}
