@@ -113,39 +113,33 @@ export function useReferenceSound(
 
   const setFrequency = useCallback((newFrequency: number) => {
     setFrequencyState(newFrequency);
-    const resources = resourcesRef.current;
-    if (resources) {
-      resources.oscillator.frequency.setValueAtTime(
-        newFrequency,
-        resources.audioContext.currentTime,
-      );
-    }
   }, []);
 
   const setWaveform = useCallback((newWaveform: WaveformType) => {
     setWaveformState(newWaveform);
-    const resources = resourcesRef.current;
-    if (resources) {
-      resources.oscillator.type = newWaveform;
-    }
   }, []);
 
   const setVolume = useCallback((newVolume: number) => {
     setVolumeState(newVolume);
-    // gain is updated via useEffect to avoid duplication
   }, []);
 
-  // Apply volume and muted state changes to gain (single source of truth)
+  // Sync state changes to audio resources
   useEffect(() => {
     const resources = resourcesRef.current;
-    if (resources) {
-      const effectiveVolume = muted ? 0 : volume;
-      resources.gainNode.gain.setValueAtTime(
-        effectiveVolume,
-        resources.audioContext.currentTime,
-      );
-    }
-  }, [muted, volume]);
+    if (!resources) return;
+
+    resources.oscillator.frequency.setValueAtTime(
+      frequency,
+      resources.audioContext.currentTime,
+    );
+    resources.oscillator.type = waveform;
+
+    const effectiveVolume = muted ? 0 : volume;
+    resources.gainNode.gain.setValueAtTime(
+      effectiveVolume,
+      resources.audioContext.currentTime,
+    );
+  }, [frequency, waveform, volume, muted]);
 
   // Cleanup on unmount
   useEffect(() => {

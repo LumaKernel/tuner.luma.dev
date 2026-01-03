@@ -1,4 +1,4 @@
-import { useRef, useEffect, useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import {
   BPM_MIN,
   BPM_MAX,
@@ -256,6 +256,9 @@ export function useMetronomeBeat(): number {
  * Combined hook for backward compatibility.
  * Note: This will re-render on every beat, so prefer using
  * useMetronomeControl + useMetronomeBeat separately.
+ *
+ * Note: This hook does NOT stop the metronome on unmount because
+ * the metronome uses a global store that may be shared across components.
  */
 export function useMetronome(
   initialBpm = BPM_DEFAULT,
@@ -271,35 +274,19 @@ export function useMetronome(
   readonly stop: () => void;
   readonly toggle: () => void;
 } {
-  const initializedRef = useRef(false);
-
   // Initialize with provided values on first mount only
   useEffect(() => {
-    if (!initializedRef.current) {
-      initializedRef.current = true;
-      if (controlState.bpm !== initialBpm) {
-        setBpm(initialBpm);
-      }
-      if (controlState.volume !== initialVolume) {
-        setVolume(initialVolume);
-      }
+    if (controlState.bpm !== initialBpm) {
+      setBpm(initialBpm);
+    }
+    if (controlState.volume !== initialVolume) {
+      setVolume(initialVolume);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally run only on mount
   }, []);
 
   const control = useMetronomeControl();
   const currentBeat = useMetronomeBeat();
-
-  // Cleanup on unmount
-  const cleanupRef = useRef(false);
-  useEffect(() => {
-    cleanupRef.current = true;
-    return () => {
-      if (cleanupRef.current && resources) {
-        stopMetronome();
-      }
-    };
-  }, []);
 
   return {
     ...control,
