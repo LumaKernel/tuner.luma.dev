@@ -11,10 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { MicrophoneSelector } from "./MicrophoneSelector";
 import type { AudioDevice } from "@/hooks/useMicrophoneDevices";
-import {
-  formatDurationShort,
-  isValidDuration,
-} from "@/lib/durationUtils";
+import { formatDurationShort, isValidDuration } from "@/lib/durationUtils";
 import {
   DURATION_PRESETS_DEFAULT,
   DURATION_MIN,

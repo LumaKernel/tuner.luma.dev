@@ -73,9 +73,7 @@ describe("sanitizeDurationPresets", () => {
   });
 
   it("returns defaults for wrong count", () => {
-    expect(sanitizeDurationPresets([30, 60])).toEqual(
-      DURATION_PRESETS_DEFAULT,
-    );
+    expect(sanitizeDurationPresets([30, 60])).toEqual(DURATION_PRESETS_DEFAULT);
     expect(sanitizeDurationPresets([])).toEqual(DURATION_PRESETS_DEFAULT);
   });
 
@@ -83,9 +81,9 @@ describe("sanitizeDurationPresets", () => {
     expect(sanitizeDurationPresets([0, 30, 60, 90, 120, 180])).toEqual(
       DURATION_PRESETS_DEFAULT,
     );
-    expect(
-      sanitizeDurationPresets(["a", "b", "c", "d", "e", "f"]),
-    ).toEqual(DURATION_PRESETS_DEFAULT);
+    expect(sanitizeDurationPresets(["a", "b", "c", "d", "e", "f"])).toEqual(
+      DURATION_PRESETS_DEFAULT,
+    );
   });
 
   it("accepts valid preset arrays", () => {
@@ -95,14 +93,14 @@ describe("sanitizeDurationPresets", () => {
 
   it("filters invalid values and falls back if count wrong", () => {
     // 7 values → sliced to 6, all valid
-    expect(
-      sanitizeDurationPresets([10, 20, 30, 60, 120, 300, 400]),
-    ).toEqual([10, 20, 30, 60, 120, 300]);
+    expect(sanitizeDurationPresets([10, 20, 30, 60, 120, 300, 400])).toEqual([
+      10, 20, 30, 60, 120, 300,
+    ]);
   });
 
   it("rejects non-integer durations", () => {
-    expect(
-      sanitizeDurationPresets([30.5, 60, 90, 120, 180, 240]),
-    ).toEqual(DURATION_PRESETS_DEFAULT);
+    expect(sanitizeDurationPresets([30.5, 60, 90, 120, 180, 240])).toEqual(
+      DURATION_PRESETS_DEFAULT,
+    );
   });
 });

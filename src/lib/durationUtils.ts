@@ -26,9 +26,7 @@ export function formatDurationShort(seconds: number): string {
   return `${mins}分${secs}秒`;
 }
 
-export function sanitizeDurationPresets(
-  parsed: unknown,
-): readonly number[] {
+export function sanitizeDurationPresets(parsed: unknown): readonly number[] {
   if (!Array.isArray(parsed)) {
     return DURATION_PRESETS_DEFAULT;
   }
