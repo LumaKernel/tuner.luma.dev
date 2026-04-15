@@ -11,6 +11,17 @@ export const BPM_PRESETS_DEFAULT: readonly number[] = [
 ];
 
 // ============================================================================
+// Duration Preset Constants
+// ============================================================================
+
+export const DURATION_PRESET_COUNT = 6;
+export const DURATION_MIN = 1; // 1 second minimum
+export const DURATION_MAX = 600; // 10 minutes maximum
+export const DURATION_PRESETS_DEFAULT: readonly number[] = [
+  15, 30, 60, 90, 120, 180,
+];
+
+// ============================================================================
 // Volume Constants
 // ============================================================================
 

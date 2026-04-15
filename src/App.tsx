@@ -386,6 +386,15 @@ function TunerApp() {
     [settings],
   );
 
+  const handleDurationPresetsChange = useCallback(
+    (presets: readonly number[]) => {
+      settings.update((draft) => {
+        draft.durationPresets = [...presets];
+      });
+    },
+    [settings],
+  );
+
   const handleCloseRecordings = useCallback(() => {
     stopPlayback();
     setIsRecordingsOpen(false);
@@ -482,6 +491,8 @@ function TunerApp() {
                   isSaving={isSaving}
                   recordingDuration={settings.state.recordingDuration}
                   onDurationChange={handleDurationChange}
+                  durationPresets={settings.state.durationPresets}
+                  onDurationPresetsChange={handleDurationPresetsChange}
                   devices={devices}
                   selectedDeviceId={selectedDeviceId}
                   onDeviceChange={handleDeviceChange}

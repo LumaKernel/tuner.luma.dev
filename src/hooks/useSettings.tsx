@@ -14,7 +14,13 @@ import type {
   Temperament,
 } from "@/types";
 import { DEFAULT_ADVANCED_SETTINGS } from "@/types";
-import { BPM_PRESETS_DEFAULT, BPM_MIN, BPM_MAX } from "@/constants/audio";
+import {
+  BPM_PRESETS_DEFAULT,
+  BPM_MIN,
+  BPM_MAX,
+  DURATION_PRESETS_DEFAULT,
+} from "@/constants/audio";
+import { sanitizeDurationPresets } from "@/lib/durationUtils";
 
 const STORAGE_KEY = "tuner-settings";
 
@@ -26,6 +32,7 @@ const defaultSettings: Settings = {
   audioFormat: "wav",
   advanced: DEFAULT_ADVANCED_SETTINGS,
   bpmPresets: BPM_PRESETS_DEFAULT,
+  durationPresets: DURATION_PRESETS_DEFAULT,
 };
 
 const VALID_TRANSPOSITIONS: readonly Transposition[] = [
@@ -125,6 +132,7 @@ function sanitizeSettings(parsed: unknown): Settings {
         : defaultSettings.audioFormat,
     advanced: sanitizeAdvancedSettings(obj.advanced),
     bpmPresets: sanitizeBpmPresets(obj.bpmPresets),
+    durationPresets: sanitizeDurationPresets(obj.durationPresets),
   };
 }
 

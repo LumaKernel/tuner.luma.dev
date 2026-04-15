@@ -88,6 +88,7 @@ export type Settings = {
   readonly audioFormat: AudioFormat; // 保存・ダウンロード形式
   readonly advanced: AdvancedSettings; // 高度な設定
   readonly bpmPresets: readonly number[]; // BPMプリセット
+  readonly durationPresets: readonly number[]; // 保存時間プリセット（秒）
 };
 
 export type Recording = {
