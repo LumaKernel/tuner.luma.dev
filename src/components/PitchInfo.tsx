@@ -63,7 +63,7 @@ export function PitchInfo({
 
   return (
     <Card>
-      <CardContent className="pt-4">
+      <CardContent>
         <div className="flex items-center justify-between gap-4">
           {/* Note display */}
           <div className="flex items-baseline gap-1">

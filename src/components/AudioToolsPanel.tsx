@@ -612,30 +612,30 @@ export const AudioToolsPanel = memo(function AudioToolsPanel({
   );
 
   return (
-    <Card>
-      <CardContent className="pt-4">
-        {/* Header with toggle */}
-        <button
-          type="button"
-          className="w-full flex items-center justify-between text-left"
-          onClick={() => setIsExpanded(!isExpanded)}
-        >
-          <div className="flex items-center gap-2">
-            <Volume2 className="h-4 w-4" />
-            <span className="font-medium">音声ツール</span>
-            {(referenceSound.isPlaying || metronome.isPlaying) && (
-              <span className="text-xs text-green-500">(再生中)</span>
-            )}
-          </div>
-          {isExpanded ? (
-            <ChevronUp className="h-4 w-4" />
-          ) : (
-            <ChevronDown className="h-4 w-4" />
+    <Card className="py-0 gap-0">
+      {/* Header with toggle - full card width clickable area */}
+      <button
+        type="button"
+        className="w-full px-6 py-4 flex items-center justify-between text-left cursor-pointer"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center gap-2">
+          <Volume2 className="h-4 w-4" />
+          <span className="font-medium">音声ツール</span>
+          {(referenceSound.isPlaying || metronome.isPlaying) && (
+            <span className="text-xs text-green-500">(再生中)</span>
           )}
-        </button>
+        </div>
+        {isExpanded ? (
+          <ChevronUp className="h-4 w-4" />
+        ) : (
+          <ChevronDown className="h-4 w-4" />
+        )}
+      </button>
 
-        {isExpanded && (
-          <div className="mt-4 space-y-6">
+      {isExpanded && (
+        <CardContent className="pb-4">
+          <div className="space-y-6">
             {/* Reference Sound Section */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -844,8 +844,8 @@ export const AudioToolsPanel = memo(function AudioToolsPanel({
               />
             </div>
           </div>
-        )}
-      </CardContent>
+        </CardContent>
+      )}
     </Card>
   );
 });
