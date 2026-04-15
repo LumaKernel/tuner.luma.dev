@@ -1,0 +1,22 @@
+## Codebase Patterns
+- BPMプリセットのパターン: 6個固定のチップボタン + 設定モーダル（AudioToolsPanel.tsx）。プリセットはSettings型でlocalStorageに保存。sanitize関数でバリデーション
+- Settings管理: useSettings.tsx で immer + Context.Provider パターン。localStorage に "tuner-settings" キーで保存
+- UI コンポーネントは Radix UI + shadcn/ui パターン（Dialog, Button, Input, Label 等）
+- テストは vitest、src/lib/ に純粋関数のテスト（bpmUtils.test.ts, micAutoSelect.test.ts, durationUtils.test.ts）
+- 定数は src/constants/audio.ts に集約
+
+## 2026-04-15 - 保存時間プリセット
+- 実装した内容: 保存時間にBPMプリセットと同様のチップボタン機能を追加
+- 変更したファイル:
+  - src/constants/audio.ts: DURATION_PRESET_COUNT, DURATION_MIN, DURATION_MAX, DURATION_PRESETS_DEFAULT を追加
+  - src/types/index.ts: Settings型に durationPresets を追加
+  - src/lib/durationUtils.ts: isValidDuration, formatDurationShort, sanitizeDurationPresets を新規作成
+  - src/lib/durationUtils.test.ts: 上記のテストを追加
+  - src/hooks/useSettings.tsx: durationPresets のサニタイズとデフォルト値を追加
+  - src/components/ControlPanel.tsx: Select UIをプリセットチップボタン + 設定モーダルに置き換え
+  - src/App.tsx: handleDurationPresetsChange コールバックと props 追加
+- **今後のイテレーションへの学び:**
+  - ControlPanelの旧Select UI (30秒/1分/2分/カスタム) はプリセットチップに完全置き換えた。カスタム入力はプリセット設定モーダル経由になった
+  - prettier の check が CI で走るので、新規ファイルは必ず `npx prettier --write` してからコミットすること
+  - CI にカバレッジ設定がないため、ベースラインカバレッジの取得はCIログからはできない
+---
