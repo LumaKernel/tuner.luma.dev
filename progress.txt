@@ -4,6 +4,7 @@
 - UI コンポーネントは Radix UI + shadcn/ui パターン（Dialog, Button, Input, Label 等）
 - テストは vitest、src/lib/ に純粋関数のテスト（bpmUtils.test.ts, micAutoSelect.test.ts, durationUtils.test.ts）
 - 定数は src/constants/audio.ts に集約
+- 折りたたみCard: `py-0 gap-0` オーバーライド + button直下配置でクリッカブル全域化。CardContentにpt追加は二重パディングになるので避ける
 
 ## 2026-04-15 - 保存時間プリセット
 - 実装した内容: 保存時間にBPMプリセットと同様のチップボタン機能を追加
@@ -19,4 +20,14 @@
   - ControlPanelの旧Select UI (30秒/1分/2分/カスタム) はプリセットチップに完全置き換えた。カスタム入力はプリセット設定モーダル経由になった
   - prettier の check が CI で走るので、新規ファイルは必ず `npx prettier --write` してからコミットすること
   - CI にカバレッジ設定がないため、ベースラインカバレッジの取得はCIログからはできない
+---
+
+## 2026-04-15 - カードUIパディング・クリッカブル修正
+- 実装した内容: AudioToolsPanelのカードヘッダー全領域をクリッカブル化、パディング均等化、cursor-pointer追加。PitchInfoのパディング不均衡も修正
+- 変更したファイル:
+  - src/components/AudioToolsPanel.tsx: Card py-0/gap-0オーバーライド、button要素をCard直下に移動しpx-6/py-4/cursor-pointer付与、CardContentを展開時のみ描画
+  - src/components/PitchInfo.tsx: CardContentからpt-4を除去
+- **今後のイテレーションへの学び:**
+  - shadcn Card は `py-6 gap-6` がデフォルト。折りたたみUIに使う場合は `py-0 gap-0` でオーバーライドし、button要素にパディングを持たせるとクリッカブル領域が広がる
+  - CardContentにpt-*を追加するとCardのpy-6と二重になりアンバランスになる。基本的にCardのpyで十分
 ---
